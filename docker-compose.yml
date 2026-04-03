@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # GWAS Web 应用服务
+  gwas-web:
+    build: .
+    container_name: gwas-web
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=${PORT:-3000}
+      - DOCKER_CONTAINER=${DOCKER_CONTAINER:-gwas-worker}
+      - SMTP_HOST=${SMTP_HOST:-mailserver}
+      - SMTP_PORT=${SMTP_PORT:-1025}
+      - SMTP_SECURE=${SMTP_SECURE:-false}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_FROM=${SMTP_FROM:-noreply@gwas.local}
+    volumes:
+      - ./uploads:/app/uploads
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - gwas-worker
+      - mailserver
+    networks:
+      - gwas-network
+    restart: unless-stopped
+
+  # GWAS 处理工作容器
+  gwas-worker:
+    image: ubuntu:22.04
+    container_name: gwas-worker
+    # 保持容器运行以接收文件
+    command: /bin/bash -c "mkdir -p /data/input /data/output && tail -f /dev/null"
+    volumes:
+      - gwas-data-input:/data/input
+      - gwas-data-output:/data/output
+    networks:
+      - gwas-network
+    restart: unless-stopped
+
+  # 邮件服务器（开发环境使用 MailHog）
+  mailserver:
+    image: mailhog/mailhog:latest
+    container_name: gwas-mailserver
+    ports:
+      - "1025:1025"  # SMTP 端口
+      - "8025:8025"  # Web UI 端口
+    networks:
+      - gwas-network
+    restart: unless-stopped
+
+volumes:
+  gwas-data-input:
+  gwas-data-output:
+
+networks:
+  gwas-network:
+    driver: bridge

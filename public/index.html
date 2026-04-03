@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GWAS 数据上传系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 150px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .table-input-hint {
+            color: #999;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 5px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f9f9f9;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f4f4ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #f0f0ff;
+        }
+
+        .upload-area input[type="file"] {
+            display: none;
+        }
+
+        .upload-text {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            color: #999;
+            font-size: 12px;
+        }
+
+        .file-name {
+            margin-top: 10px;
+            color: #667eea;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .progress-bar.show {
+            display: block;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .help-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .help-title {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .help-text {
+            color: #666;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .help-text code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .status.show {
+            display: block;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .status-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .status-value {
+            color: #333;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 GWAS 数据上传系统</h1>
+        <p class="subtitle">将您的两列表格数据上传到系统处理</p>
+
+        <div id="messageContainer"></div>
+
+        <form id="uploadForm">
+            <!-- 邮箱输入 -->
+            <div class="form-group">
+                <label for="email">📧 接收邮件的邮箱 <span style="color: red;">*</span></label>
+                <input type="email" id="email" name="email" placeholder="例如: user@example.com" required>
+            </div>
+
+            <!-- 上传文件方式 -->
+            <div class="form-group">
+                <label>📁 选择上传方式</label>
+                <select id="uploadMethod" style="margin-bottom: 15px;">
+                    <option value="file">上传 CSV/TSV 文件</option>
+                    <option value="manual">手动输入表格数据</option>
+                </select>
+
+                <!-- 文件上传 -->
+                <div id="fileUploadSection">
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-text">📤 点击或拖拽上传 CSV/TSV 文件</div>
+                        <div class="upload-hint">支持 CSV/TSV/TXT 格式，包含两列数据</div>
+                        <input type="file" id="fileInput" name="file" accept=".csv,.tsv,.txt,text/tab-separated-values,text/csv">
+                        <div class="file-name" id="fileName"></div>
+                    </div>
+                </div>
+
+                <!-- 手动输入 -->
+                <div id="manualInputSection" style="display: none;">
+                    <textarea id="tableData" placeholder="请输入您的表格数据，两列用制表符或逗号分隔&#10;示例：&#10;Column1&#9;Column2&#10;data1&#9;data2&#10;data3&#9;data4"></textarea>
+                    <div class="table-input-hint">每行代表一条记录，列之间使用制表符(Tab)或逗号分隔</div>
+                </div>
+            </div>
+
+            <!-- 目标路径 -->
+            <div class="form-group">
+                <label for="targetPath">🎯 Docker 中的目标路径 <span style="color: red;">*</span></label>
+                <input type="text" id="targetPath" name="targetPath" placeholder="例如: /data/input/" required>
+                <div class="table-input-hint">表格文件将被复制到此路径</div>
+            </div>
+
+            <!-- 任务名称 -->
+            <div class="form-group">
+                <label for="taskName">🏷️ 任务名称 (可选)</label>
+                <input type="text" id="taskName" name="taskName" placeholder="为此任务取个名字（可选）">
+            </div>
+
+            <!-- 按钮 -->
+            <div class="button-group">
+                <button type="submit" class="btn-primary" id="submitBtn">🚀 提交任务</button>
+                <button type="reset" class="btn-secondary" id="resetBtn">🔄 重置表单</button>
+            </div>
+
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+
+            <!-- 状态显示 -->
+            <div class="status" id="status">
+                <div class="status-item">
+                    <span class="status-label">任务 ID:</span>
+                    <span class="status-value" id="taskId">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">状态:</span>
+                    <span class="status-value" id="statusValue">处理中...</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">阶段:</span>
+                    <span class="status-value" id="stageValue">排队中</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">排队位置:</span>
+                    <span class="status-value" id="queuePosition">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">已处理行数:</span>
+                    <span class="status-value" id="processedRows">0</span>
+                </div>
+            </div>
+        </form>
+
+        <!-- 帮助部分 -->
+        <div class="help-section">
+            <div class="help-title">💡 使用说明</div>
+            <div class="help-text">
+                <p>1. 输入接收邮件的邮箱地址</p>
+                <p>2. 选择上传方式（CSV文件或手动输入）</p>
+                <p>3. 指定Docker容器中的目标路径</p>
+                <p>4. 点击提交，系统将处理数据并发送邮件通知</p>
+                <p style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd;">
+                    <strong>CSV 格式要求:</strong> 文件应包含恰好两列数据
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('uploadForm');
+        const uploadMethod = document.getElementById('uploadMethod');
+        const fileUploadSection = document.getElementById('fileUploadSection');
+        const manualInputSection = document.getElementById('manualInputSection');
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const messageContainer = document.getElementById('messageContainer');
+        const submitBtn = document.getElementById('submitBtn');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const status = document.getElementById('status');
+        let currentPolling = null;
+
+        // 切换上传方式
+        uploadMethod.addEventListener('change', (e) => {
+            if (e.target.value === 'file') {
+                fileUploadSection.style.display = 'block';
+                manualInputSection.style.display = 'none';
+            } else {
+                fileUploadSection.style.display = 'none';
+                manualInputSection.style.display = 'block';
+            }
+        });
+
+        // 文件拖拽上传
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                displayFileName(files[0].name);
+            }
+        });
+
+        // 文件选择
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                displayFileName(e.target.files[0].name);
+            }
+        });
+
+        function displayFileName(name) {
+            fileName.textContent = `✅ 已选择: ${name}`;
+        }
+
+        // 显示消息
+        function showMessage(message, type = 'info') {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${type} show`;
+            msgDiv.textContent = message;
+            messageContainer.innerHTML = '';
+            messageContainer.appendChild(msgDiv);
+
+            if (type === 'success') {
+                setTimeout(() => msgDiv.remove(), 5000);
+            }
+        }
+
+        // 表单提交
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (currentPolling) {
+                clearInterval(currentPolling);
+                currentPolling = null;
+            }
+
+            const email = document.getElementById('email').value;
+            const targetPath = document.getElementById('targetPath').value;
+            const taskName = document.getElementById('taskName').value || '未命名任务';
+            const uploadMethod = document.getElementById('uploadMethod').value;
+
+            // 获取表格数据
+            let tableData = '';
+            if (uploadMethod === 'file') {
+                if (!fileInput.files.length) {
+                    showMessage('❌ 请选择一个 CSV 文件', 'error');
+                    return;
+                }
+                tableData = await readFileAsText(fileInput.files[0]);
+            } else {
+                tableData = document.getElementById('tableData').value;
+                if (!tableData.trim()) {
+                    showMessage('❌ 请输入表格数据', 'error');
+                    return;
+                }
+            }
+
+            // 验证表格数据
+            const lines = tableData.trim().split('\n');
+            if (lines.length < 1) {
+                showMessage('❌ 表格数据不能为空', 'error');
+                return;
+            }
+
+            const columnCheck = validateTwoColumns(tableData);
+            if (!columnCheck.ok) {
+                showMessage(`❌ ${columnCheck.message}`, 'error');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            progressBar.classList.add('show');
+            status.classList.add('show');
+            progressFill.style.width = '5%';
+            document.getElementById('statusValue').textContent = '已提交';
+            document.getElementById('stageValue').textContent = '等待服务器响应';
+            document.getElementById('queuePosition').textContent = '-';
+            document.getElementById('processedRows').textContent = '0';
+
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email,
+                        targetPath,
+                        taskName,
+                        tableData,
+                        rowCount: lines.length
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('taskId').textContent = result.taskId;
+                    document.getElementById('queuePosition').textContent = String(result.queuePosition || 0);
+                    document.getElementById('stageValue').textContent = '排队中';
+                    progressFill.style.width = '15%';
+                    
+                    showMessage(`✅ 任务已提交，当前队列位置: ${result.queuePosition || 0}。系统会邮件通知 ${email}`, 'info');
+                    startPollingStatus(result.taskId, lines.length);
+                } else {
+                    showMessage(`❌ 提交失败: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`❌ 网络错误: ${error.message}`, 'error');
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
+
+        // 读取文件内容
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(e);
+                reader.readAsText(file);
+            });
+        }
+
+        function validateTwoColumns(tableData) {
+            const lines = tableData
+                .split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0);
+
+            if (lines.length === 0) {
+                return { ok: false, message: '表格内容不能为空' };
+            }
+
+            for (let i = 0; i < lines.length; i++) {
+                const cols = lines[i].split(/\t|,/).map(col => col.trim());
+                if (cols.length !== 2) {
+                    return { ok: false, message: `第 ${i + 1} 行不是两列` };
+                }
+                if (!cols[0] || !cols[1]) {
+                    return { ok: false, message: `第 ${i + 1} 行存在空值` };
+                }
+            }
+
+            return { ok: true };
+        }
+
+        function mapStage(stage) {
+            const stageMap = {
+                queue: '排队中',
+                copy: '执行演示命令（cp）',
+                done: '完成',
+                failed: '失败'
+            };
+            return stageMap[stage] || stage || '-';
+        }
+
+        function startPollingStatus(taskId, totalRows) {
+            currentPolling = setInterval(async () => {
+                try {
+                    const response = await fetch(`/api/status/${taskId}`);
+                    const result = await response.json();
+
+                    if (!response.ok || !result.success) {
+                        throw new Error(result.message || '状态查询失败');
+                    }
+
+                    const task = result.task;
+                    document.getElementById('statusValue').textContent = task.status;
+                    document.getElementById('stageValue').textContent = mapStage(task.stage);
+                    document.getElementById('queuePosition').textContent = String(task.queuePosition || 0);
+                    document.getElementById('processedRows').textContent = `${task.processedRows || 0}/${totalRows}`;
+                    progressFill.style.width = `${Math.min(100, Number(task.progress || 0))}%`;
+
+                    if (task.status === 'completed') {
+                        clearInterval(currentPolling);
+                        currentPolling = null;
+                        showMessage(`✅ 任务完成！你将收到邮件，或直接下载: /api/download/${taskId}`, 'success');
+                        submitBtn.disabled = false;
+                        form.reset();
+                        fileName.textContent = '';
+                    }
+
+                    if (task.status === 'failed') {
+                        clearInterval(currentPolling);
+                        currentPolling = null;
+                        showMessage(`❌ 任务失败: ${task.message}`, 'error');
+                        submitBtn.disabled = false;
+                    }
+                } catch (error) {
+                    clearInterval(currentPolling);
+                    currentPolling = null;
+                    submitBtn.disabled = false;
+                    showMessage(`❌ 查询状态失败: ${error.message}`, 'error');
+                }
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
