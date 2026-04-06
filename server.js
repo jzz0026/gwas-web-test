@@ -13,6 +13,7 @@ const PORT = process.env.PORT || 3000;
 const MAX_CONCURRENT_TASKS = Number(process.env.MAX_CONCURRENT_TASKS || 2);
 const PROCESSING_DELAY_MS = Number(process.env.PROCESSING_DELAY_MS || 3000);
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
+const GWAS_RUNNER_IMAGE = process.env.GWAS_RUNNER_IMAGE || 'ubuntu:22.04';
 
 // 中间件配置
 app.use(bodyParser.json({ limit: '50mb' }));
@@ -189,6 +190,35 @@ async function executeCopyCommand(filePath, targetPath, containerName) {
 }
 
 /**
+ * 使用临时独立容器执行 GWAS（当前为演示 cp，可替换为真实命令）
+ */
+async function executeRunnerTask(sharedContainerName, inputFilePath, taskId) {
+    const outputFilePath = `/data/output/result_${taskId}.csv`;
+
+    console.log(`[Runner] 启动独立容器: ${GWAS_RUNNER_IMAGE}`);
+    console.log(`[Runner] 输入文件: ${inputFilePath}`);
+    console.log(`[Runner] 输出文件: ${outputFilePath}`);
+
+    // 通过 --volumes-from 复用共享数据卷，容器只在任务期间运行
+    await runCommand('docker', [
+        'run',
+        '--rm',
+        '--volumes-from',
+        sharedContainerName,
+        GWAS_RUNNER_IMAGE,
+        'cp',
+        inputFilePath,
+        outputFilePath
+    ]);
+
+    return {
+        success: true,
+        outputFilePath,
+        message: '独立 runner 容器执行完成（演示模式：cp）'
+    };
+}
+
+/**
  * 发送邮件通知
  */
 async function sendNotificationEmail(email, taskId, taskName, status, message, downloadUrl = '') {
@@ -234,10 +264,15 @@ async function processTask(taskId) {
     try {
         await sleep(Math.max(500, Math.floor(PROCESSING_DELAY_MS / 2)));
         task.progress = 60;
-        task.message = '正在执行演示命令（cp），此步骤替代 GWAS 分析';
+        task.message = '正在将输入文件复制到共享数据卷...';
 
         const containerName = process.env.DOCKER_CONTAINER || 'gwas-worker';
         const copyResult = await executeCopyCommand(task.filePath, task.targetPath, containerName);
+
+        task.stage = 'gwas';
+        task.progress = 80;
+        task.message = '正在启动独立 runner 容器执行分析（演示 cp）...';
+        const runnerResult = await executeRunnerTask(containerName, copyResult.remoteFilePath, task.id);
 
         await sleep(Math.max(500, Math.floor(PROCESSING_DELAY_MS / 2)));
         task.status = 'completed';
@@ -245,14 +280,14 @@ async function processTask(taskId) {
         task.progress = 100;
         task.processedRows = task.rowCount;
         task.completedAt = new Date();
-        task.message = `✅ 已完成：演示 cp 成功，文件已放入 ${copyResult.remoteFilePath}`;
+        task.message = `✅ 已完成：输入文件 ${copyResult.remoteFilePath}；结果文件 ${runnerResult.outputFilePath}`;
 
         await sendNotificationEmail(
             task.email,
             task.id,
             task.taskName,
             'success',
-            `任务完成。当前为演示模式：已用 docker cp 替代 GWAS 主流程，处理 ${task.rowCount} 行两列表格。`,
+            `任务完成。已在独立 runner 容器中执行（演示模式：cp），处理 ${task.rowCount} 行两列表格。结果位于 ${runnerResult.outputFilePath}。`,
             `${BASE_URL}/api/download/${task.id}`
         );
 
@@ -481,6 +516,7 @@ app.listen(PORT, () => {
     console.log(`📍 访问地址: http://localhost:${PORT}`);
     console.log(`📧 邮件服务: ${process.env.SMTP_HOST || '未配置'}`);
     console.log(`🐳 Docker 容器: ${process.env.DOCKER_CONTAINER || '未指定'}`);
+    console.log(`🧬 Runner 镜像: ${GWAS_RUNNER_IMAGE}`);
     console.log(`⏱️  最大并发任务: ${MAX_CONCURRENT_TASKS}`);
     console.log(`🧪 演示延迟(替代GWAS): ${PROCESSING_DELAY_MS}ms`);
     console.log(`========================================\n`);

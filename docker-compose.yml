@@ -16,6 +16,7 @@ services:
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASS=${SMTP_PASS}
       - SMTP_FROM=${SMTP_FROM:-noreply@gwas.local}
+      - GWAS_RUNNER_IMAGE=${GWAS_RUNNER_IMAGE:-ubuntu:22.04}
     volumes:
       - ./uploads:/app/uploads
       - /var/run/docker.sock:/var/run/docker.sock

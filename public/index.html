@@ -318,13 +318,6 @@
                 </div>
             </div>
 
-            <!-- 目标路径 -->
-            <div class="form-group">
-                <label for="targetPath">🎯 Docker 中的目标路径 <span style="color: red;">*</span></label>
-                <input type="text" id="targetPath" name="targetPath" placeholder="例如: /data/input/" required>
-                <div class="table-input-hint">表格文件将被复制到此路径</div>
-            </div>
-
             <!-- 任务名称 -->
             <div class="form-group">
                 <label for="taskName">🏷️ 任务名称 (可选)</label>
@@ -372,8 +365,8 @@
             <div class="help-text">
                 <p>1. 输入接收邮件的邮箱地址</p>
                 <p>2. 选择上传方式（CSV文件或手动输入）</p>
-                <p>3. 指定Docker容器中的目标路径</p>
-                <p>4. 点击提交，系统将处理数据并发送邮件通知</p>
+                <p>3. 点击提交，系统将处理数据并发送邮件通知</p>
+                <p>默认上传路径：/data/input/</p>
                 <p style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd;">
                     <strong>CSV 格式要求:</strong> 文件应包含恰好两列数据
                 </p>
@@ -460,7 +453,7 @@
             }
 
             const email = document.getElementById('email').value;
-            const targetPath = document.getElementById('targetPath').value;
+            const targetPath = '/data/input/';
             const taskName = document.getElementById('taskName').value || '未命名任务';
             const uploadMethod = document.getElementById('uploadMethod').value;
 
@@ -574,6 +567,7 @@
             const stageMap = {
                 queue: '排队中',
                 copy: '执行演示命令（cp）',
+                gwas: '独立容器执行（可替换真实GWAS）',
                 done: '完成',
                 failed: '失败'
             };
