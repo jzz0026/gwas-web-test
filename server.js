@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3000;
 const MAX_CONCURRENT_TASKS = Number(process.env.MAX_CONCURRENT_TASKS || 2);
 const PROCESSING_DELAY_MS = Number(process.env.PROCESSING_DELAY_MS || 3000);
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
-const GWAS_RUNNER_IMAGE = process.env.GWAS_RUNNER_IMAGE || 'ubuntu:22.04';
+const GWAS_RUNNER_IMAGE = process.env.GWAS_RUNNER_IMAGE || 'gwas-worker:latest';
 
 // 中间件配置
 app.use(bodyParser.json({ limit: '50mb' }));

@@ -16,7 +16,7 @@ services:
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASS=${SMTP_PASS}
       - SMTP_FROM=${SMTP_FROM:-noreply@gwas.local}
-      - GWAS_RUNNER_IMAGE=${GWAS_RUNNER_IMAGE:-ubuntu:22.04}
+      - GWAS_RUNNER_IMAGE=${GWAS_RUNNER_IMAGE:-gwas-worker:latest}
     volumes:
       - ./uploads:/app/uploads
       - /var/run/docker.sock:/var/run/docker.sock
@@ -29,13 +29,17 @@ services:
 
   # GWAS 处理工作容器
   gwas-worker:
-    image: ubuntu:22.04
+    build:
+      context: .
+      dockerfile: Dockerfile.gwas-worker
+    image: gwas-worker:latest
     container_name: gwas-worker
     # 保持容器运行以接收文件
     command: /bin/bash -c "mkdir -p /data/input /data/output && tail -f /dev/null"
     volumes:
       - gwas-data-input:/data/input
       - gwas-data-output:/data/output
+      - ./gwasScripts:/opt/gwasScripts
     networks:
       - gwas-network
     restart: unless-stopped

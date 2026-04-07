@@ -134,11 +134,15 @@ SMTP_PASS=your-password
   - `/var/run/docker.sock` - Docker 访问
 
 ### gwas-worker (处理容器)
-- **镜像**: `ubuntu:22.04`
+- **镜像**: 本地构建 (`Dockerfile.gwas-worker`)
 - **目的**: 接收和存储数据文件
+- **依赖安装方式**: apt 直装（不使用 conda）
+- **内置依赖**: Python 2.7、R、MASS、MatrixCalc、mvnpermute、wget、unzip、libgfortran3
 - **数据卷**:
   - `gwas-data-input` - 输入数据
   - `gwas-data-output` - 输出数据
+
+> 说明：`mvnpermute` 已固化在镜像构建阶段，容器重建后依然可用。
 
 ### gwas-mailserver (MailHog)
 - **镜像**: `mailhog/mailhog`

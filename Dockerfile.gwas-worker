@@ -1,0 +1,28 @@
+FROM ubuntu:18.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install kmersgwas runtime dependencies directly via apt (no conda).
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        python2.7 \
+        python-pip \
+        r-base \
+        r-cran-mass \
+        r-cran-matrixcalc \
+        wget \
+        unzip \
+        libgfortran3 && \
+    rm -rf /var/lib/apt/lists/*
+
+# Keep both python and pip commands available in the container.
+RUN ln -sf /usr/bin/python2.7 /usr/local/bin/python && \
+    ln -sf /usr/bin/pip /usr/local/bin/pip2
+
+# Optional: install in R manually later if needed:
+RUN R -q -e "install.packages('mvnpermute', repos='https://cloud.r-project.org')"
+
+RUN mkdir -p /data/input /data/output
+
+CMD ["/bin/bash", "-c", "tail -f /dev/null"]
