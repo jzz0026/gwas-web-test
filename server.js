@@ -205,14 +205,20 @@ async function executeRunnerTask(sharedContainerName, inputFilePath, taskId) {
         console.log(`[GWAS Runner] ${logEntry}`);
     };
 
+    const outputPath = `/data/output/output_${taskId}`;
+
     addLog(`容器名称: ${sharedContainerName}`);
-    addLog(`在容器中执行命令: cd /opt/gwasScripts && bash ./06_run_gwas.sh 31 resistence.pheno 4`);
+    addLog(`输入 phenotype 文件: ${inputFilePath}`);
+    addLog(`结果目录: ${outputPath}`);
+    addLog(`在容器中执行命令: cd /opt/gwasScripts && bash ./06_run_gwas.sh 31 <uploaded_pheno_file> 4 <output_dir>`);
     addLog(`开始执行GWAS分析...`);
 
     return new Promise((resolve, reject) => {
+        const escapedInputFilePath = String(inputFilePath).replace(/"/g, '\\"');
+        const escapedOutputPath = String(outputPath).replace(/"/g, '\\"');
         // 在容器中执行脚本，先 cd 到脚本目录
         const child = require('child_process').exec(
-            `docker exec ${sharedContainerName} bash -c "cd /opt/gwasScripts && bash ./06_run_gwas.sh 31 resistence.pheno 4"`,
+            `docker exec ${sharedContainerName} bash -c "set -e; cd /opt/gwasScripts && bash ./06_run_gwas.sh 31 \"${escapedInputFilePath}\" 4 \"${escapedOutputPath}\""`,
             {
                 maxBuffer: 20 * 1024 * 1024  // 20MB 缓冲区
             },
@@ -239,8 +245,8 @@ async function executeRunnerTask(sharedContainerName, inputFilePath, taskId) {
 
                 resolve({
                     success: true,
-                    outputPath: '/opt/gwasScripts/output_dir',
-                    message: 'GWAS 分析完成，结果位于容器内 /opt/gwasScripts/output_dir',
+                    outputPath,
+                    message: `GWAS 分析完成，结果位于容器内 ${outputPath}`,
                     stdout
                 });
             }
@@ -338,7 +344,7 @@ async function processTask(taskId) {
             task.id,
             task.taskName,
             'success',
-            `GWAS 分析执行成功。处理 ${task.rowCount} 行数据。结果位于 gwasScripts/output_dir。`,
+            `GWAS 分析执行成功。处理 ${task.rowCount} 行数据。结果位于 ${runnerResult.outputPath}。`,
             `${BASE_URL}/api/download/${task.id}`
         );
 

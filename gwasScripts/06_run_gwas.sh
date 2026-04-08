@@ -13,8 +13,8 @@
 
 set -e
 
-# Usage: bash 06_run_gwas.sh <KMER_LENGTH> <PHENO_FILE> <THREADS>
-# Example: bash 06_run_gwas.sh 31 disease.pheno 8
+# Usage: bash 06_run_gwas.sh <KMER_LENGTH> <PHENO_FILE> <THREADS> [OUTDIR] [--dont_remove_intermediates]
+# Example: bash 06_run_gwas.sh 31 disease.pheno 8 /data/output/output_task_1
 #
 # If you see "libgfortran.so.3: cannot open shared object file", install it:
 #   conda install -c conda-forge libgfortran=3.0.0
@@ -23,6 +23,7 @@ set -e
 KMER_LENGTH="$1"
 PHENO_FILE="${2:-disease.pheno}"   # default disease.pheno for testing
 THREADS="${3:-8}"
+OUTDIR="${4:-output_dir}"
 
 if [[ ! -f "$PHENO_FILE" ]]; then
   echo "Error: phenotype file not found: $PHENO_FILE" >&2
@@ -48,9 +49,9 @@ else
 fi
 
 # Run k-mers-based GWAS with permutation-based threshold
-rm -rf output_dir
+rm -rf "$OUTDIR"
 EXTRA_ARGS=()
-[[ "$4" == "--dont_remove_intermediates" ]] && EXTRA_ARGS+=(--dont_remove_intermediates)
-python2.7 ./kmers_gwas.py --pheno "$PHENO_FILE" --kmers_number 100000 --kmers_table kmers_table -l "$KMER_LENGTH" -p "$THREADS" --outdir output_dir --gemma_path ./external_programs/gemma_0_96 "${EXTRA_ARGS[@]}"
+[[ "$5" == "--dont_remove_intermediates" ]] && EXTRA_ARGS+=(--dont_remove_intermediates)
+python2.7 ./kmers_gwas.py --pheno "$PHENO_FILE" --kmers_number 100000 --kmers_table kmers_table -l "$KMER_LENGTH" -p "$THREADS" --outdir "$OUTDIR" --gemma_path ./external_programs/gemma_0_96 "${EXTRA_ARGS[@]}"
 
-echo "GWAS run complete. See output_dir for results."
+echo "GWAS run complete. See $OUTDIR for results."
