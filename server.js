@@ -43,6 +43,7 @@ const transporter = nodemailer.createTransport({
 // 任务存储（简单的内存存储，生产环境应使用数据库）
 const tasks = {};
 const taskQueue = [];
+const taskLogs = {};  // 存储每个任务的日志
 let activeTaskCount = 0;
 
 /**
@@ -190,32 +191,75 @@ async function executeCopyCommand(filePath, targetPath, containerName) {
 }
 
 /**
- * 使用临时独立容器执行 GWAS（当前为演示 cp，可替换为真实命令）
+ * 执行 GWAS 脚本（在 Docker 容器中执行）
  */
 async function executeRunnerTask(sharedContainerName, inputFilePath, taskId) {
-    const outputFilePath = `/data/output/result_${taskId}.csv`;
+    // 初始化日志
+    if (!taskLogs[taskId]) {
+        taskLogs[taskId] = [];
+    }
 
-    console.log(`[Runner] 启动独立容器: ${GWAS_RUNNER_IMAGE}`);
-    console.log(`[Runner] 输入文件: ${inputFilePath}`);
-    console.log(`[Runner] 输出文件: ${outputFilePath}`);
-
-    // 通过 --volumes-from 复用共享数据卷，容器只在任务期间运行
-    await runCommand('docker', [
-        'run',
-        '--rm',
-        '--volumes-from',
-        sharedContainerName,
-        GWAS_RUNNER_IMAGE,
-        'cp',
-        inputFilePath,
-        outputFilePath
-    ]);
-
-    return {
-        success: true,
-        outputFilePath,
-        message: '独立 runner 容器执行完成（演示模式：cp）'
+    const addLog = (message) => {
+        const logEntry = `[${new Date().toLocaleTimeString()}] ${message}`;
+        taskLogs[taskId].push(logEntry);
+        console.log(`[GWAS Runner] ${logEntry}`);
     };
+
+    addLog(`容器名称: ${sharedContainerName}`);
+    addLog(`在容器中执行命令: cd /opt/gwasScripts && bash ./06_run_gwas.sh 31 resistence.pheno 4`);
+    addLog(`开始执行GWAS分析...`);
+
+    return new Promise((resolve, reject) => {
+        // 在容器中执行脚本，先 cd 到脚本目录
+        const child = require('child_process').exec(
+            `docker exec ${sharedContainerName} bash -c "cd /opt/gwasScripts && bash ./06_run_gwas.sh 31 resistence.pheno 4"`,
+            {
+                maxBuffer: 20 * 1024 * 1024  // 20MB 缓冲区
+            },
+            (error, stdout, stderr) => {
+                if (error) {
+                    addLog(`❌ 执行失败: ${error.message}`);
+                    if (stderr) {
+                        addLog(`错误日志:\n${stderr}`);
+                    }
+                    reject({
+                        success: false,
+                        message: error.message,
+                        stderr,
+                        stdout
+                    });
+                    return;
+                }
+
+                addLog(`✅ 执行成功`);
+                if (stdout) {
+                    const lines = stdout.split('\n').filter(l => l.trim());
+                    lines.forEach(line => addLog(`OUTPUT: ${line}`));
+                }
+
+                resolve({
+                    success: true,
+                    outputPath: '/opt/gwasScripts/output_dir',
+                    message: 'GWAS 分析完成，结果位于容器内 /opt/gwasScripts/output_dir',
+                    stdout
+                });
+            }
+        );
+
+        // 实时捕获输出
+        if (child.stdout) {
+            child.stdout.on('data', (data) => {
+                const lines = data.toString().split('\n').filter(l => l.trim());
+                lines.forEach(line => addLog(`STDOUT: ${line}`));
+            });
+        }
+        if (child.stderr) {
+            child.stderr.on('data', (data) => {
+                const lines = data.toString().split('\n').filter(l => l.trim());
+                lines.forEach(line => addLog(`STDERR: ${line}`));
+            });
+        }
+    });
 }
 
 /**
@@ -254,12 +298,19 @@ async function processTask(taskId) {
         return;
     }
 
+    // 初始化日志
+    if (!taskLogs[taskId]) {
+        taskLogs[taskId] = [];
+    }
+
     task.status = 'running';
     task.stage = 'copy';
     task.progress = 35;
     task.queuePosition = 0;
     task.startedAt = new Date();
     task.message = '任务开始执行，正在准备数据...';
+    taskLogs[taskId].push(`[${new Date().toLocaleTimeString()}] ✅ 任务开始执行`);
+    taskLogs[taskId].push(`[${new Date().toLocaleTimeString()}] 任务ID: ${taskId}`);
 
     try {
         await sleep(Math.max(500, Math.floor(PROCESSING_DELAY_MS / 2)));
@@ -271,7 +322,7 @@ async function processTask(taskId) {
 
         task.stage = 'gwas';
         task.progress = 80;
-        task.message = '正在启动独立 runner 容器执行分析（演示 cp）...';
+        task.message = '正在执行 GWAS 分析脚本...';
         const runnerResult = await executeRunnerTask(containerName, copyResult.remoteFilePath, task.id);
 
         await sleep(Math.max(500, Math.floor(PROCESSING_DELAY_MS / 2)));
@@ -280,14 +331,14 @@ async function processTask(taskId) {
         task.progress = 100;
         task.processedRows = task.rowCount;
         task.completedAt = new Date();
-        task.message = `✅ 已完成：输入文件 ${copyResult.remoteFilePath}；结果文件 ${runnerResult.outputFilePath}`;
+        task.message = `✅ 已完成：GWAS 分析成功。结果位于 ${runnerResult.outputPath || runnerResult.outputDir}`;
 
         await sendNotificationEmail(
             task.email,
             task.id,
             task.taskName,
             'success',
-            `任务完成。已在独立 runner 容器中执行（演示模式：cp），处理 ${task.rowCount} 行两列表格。结果位于 ${runnerResult.outputFilePath}。`,
+            `GWAS 分析执行成功。处理 ${task.rowCount} 行数据。结果位于 gwasScripts/output_dir。`,
             `${BASE_URL}/api/download/${task.id}`
         );
 
@@ -498,6 +549,34 @@ app.get('/api/download/:taskId', (req, res) => {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="result_${taskId}.txt"`);
     res.send(resultContent);
+});
+
+/**
+ * API 路由: 查看任务日志
+ */
+app.get('/api/logs/:taskId', (req, res) => {
+    const { taskId } = req.params;
+    const task = tasks[taskId];
+
+    if (!task) {
+        return res.status(404).json({
+            success: false,
+            message: '任务不存在'
+        });
+    }
+
+    const logs = taskLogs[taskId] || [];
+
+    res.json({
+        success: true,
+        taskId,
+        status: task.status,
+        stage: task.stage,
+        progress: task.progress,
+        message: task.message,
+        logs: logs,
+        logCount: logs.length
+    });
 });
 
 /**
