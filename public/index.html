@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en-US">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GWAS 数据上传系统</title>
+    <title>GWAS Data Upload System</title>
     <style>
         * {
             margin: 0;
@@ -350,103 +350,103 @@
 </head>
 <body>
     <div class="container">
-        <h1>📊 GWAS 数据上传系统</h1>
-        <p class="subtitle">将您的两列表格数据上传到系统处理</p>
+        <h1>📊 GWAS Data Upload System</h1>
+        <p class="subtitle">Upload your two-column table data for GWAS analysis</p>
 
         <div id="messageContainer"></div>
 
         <form id="uploadForm">
-            <!-- 邮箱输入 -->
+            <!-- Email Input -->
             <div class="form-group">
-                <label for="email">📧 接收邮件的邮箱 <span style="color: red;">*</span></label>
-                <input type="email" id="email" name="email" placeholder="例如: user@example.com" required>
+                <label for="email">📧 Email Address <span style="color: red;">*</span></label>
+                <input type="email" id="email" name="email" placeholder="e.g. user@example.com" required>
             </div>
 
-            <!-- 上传文件方式 -->
+            <!-- Upload Method Selection -->
             <div class="form-group">
-                <label>📁 选择上传方式</label>
+                <label>📁 Upload Method</label>
                 <select id="uploadMethod" style="margin-bottom: 15px;">
-                    <option value="file">上传 CSV/TSV 文件</option>
-                    <option value="manual">手动输入表格数据</option>
+                    <option value="file">Upload CSV/TSV File</option>
+                    <option value="manual">Enter Data Manually</option>
                 </select>
 
-                <!-- 文件上传 -->
+                <!-- File Upload -->
                 <div id="fileUploadSection">
                     <div class="upload-area" id="uploadArea">
-                        <div class="upload-text">📤 点击或拖拽上传 CSV/TSV 文件</div>
-                        <div class="upload-hint">支持 CSV/TSV/TXT 格式，包含两列数据</div>
+                        <div class="upload-text">📤 Click or drag CSV/TSV file to upload</div>
+                        <div class="upload-hint">Supports CSV/TSV/TXT format with exactly 2 columns</div>
                         <input type="file" id="fileInput" name="file" accept=".csv,.tsv,.txt,text/tab-separated-values,text/csv">
                         <div class="file-name" id="fileName"></div>
                     </div>
                 </div>
 
-                <!-- 手动输入 -->
+                <!-- Manual Input -->
                 <div id="manualInputSection" style="display: none;">
-                    <textarea id="tableData" placeholder="请输入您的表格数据，两列用制表符或逗号分隔&#10;示例：&#10;Column1&#9;Column2&#10;data1&#9;data2&#10;data3&#9;data4"></textarea>
-                    <div class="table-input-hint">每行代表一条记录，列之间使用制表符(Tab)或逗号分隔</div>
+                    <textarea id="tableData" placeholder="Please enter your table data, with two columns separated by tab or comma&#10;Example:&#10;Column1&#9;Column2&#10;data1&#9;data2&#10;data3&#9;data4"></textarea>
+                    <div class="table-input-hint">Each line is one record, and columns are separated by Tab or comma</div>
                 </div>
             </div>
 
-            <!-- 任务名称 -->
+            <!-- Task Name -->
             <div class="form-group">
-                <label for="taskName">🏷️ 任务名称 (可选)</label>
-                <input type="text" id="taskName" name="taskName" placeholder="为此任务取个名字（可选）">
+                <label for="taskName">🏷️ Task Name (Optional)</label>
+                <input type="text" id="taskName" name="taskName" placeholder="Give a name for this task (optional)">
             </div>
 
-            <!-- 按钮 -->
+            <!-- Buttons -->
             <div class="button-group">
-                <button type="submit" class="btn-primary" id="submitBtn">🚀 提交任务</button>
-                <button type="reset" class="btn-secondary" id="resetBtn">🔄 重置表单</button>
+                <button type="submit" class="btn-primary" id="submitBtn">🚀 Submit Task</button>
+                <button type="reset" class="btn-secondary" id="resetBtn">🔄 Reset Form</button>
             </div>
 
             <div class="progress-bar" id="progressBar">
                 <div class="progress-fill" id="progressFill"></div>
             </div>
 
-            <!-- 状态显示 -->
+            <!-- Status Display -->
             <div class="status" id="status">
                 <div class="status-item">
-                    <span class="status-label">任务 ID:</span>
+                    <span class="status-label">Task ID:</span>
                     <span class="status-value" id="taskId">-</span>
                 </div>
                 <div class="status-item">
-                    <span class="status-label">状态:</span>
-                    <span class="status-value" id="statusValue">处理中...</span>
+                    <span class="status-label">Status:</span>
+                    <span class="status-value" id="statusValue">Processing...</span>
                 </div>
                 <div class="status-item">
-                    <span class="status-label">阶段:</span>
-                    <span class="status-value" id="stageValue">排队中</span>
+                    <span class="status-label">Stage:</span>
+                    <span class="status-value" id="stageValue">Queued</span>
                 </div>
                 <div class="status-item">
-                    <span class="status-label">排队位置:</span>
+                    <span class="status-label">Queue Position:</span>
                     <span class="status-value" id="queuePosition">-</span>
                 </div>
                 <div class="status-item">
-                    <span class="status-label">已处理行数:</span>
+                    <span class="status-label">Processed Rows:</span>
                     <span class="status-value" id="processedRows">0</span>
                 </div>
             </div>
 
-            <!-- 日志显示面板 -->
+            <!-- Logs Panel -->
             <div class="logs-container" id="logsContainer">
                 <div class="logs-header">
-                    📋 执行日志
-                    <button type="button" class="toggle-logs-btn" id="toggleLogsBtn">收起</button>
+                    📋 Execution Logs
+                    <button type="button" class="toggle-logs-btn" id="toggleLogsBtn">Collapse</button>
                 </div>
                 <div class="logs-body" id="logBody"></div>
             </div>
         </form>
 
-        <!-- 帮助部分 -->
+        <!-- Help Section -->
         <div class="help-section">
-            <div class="help-title">💡 使用说明</div>
+            <div class="help-title">💡 Instructions</div>
             <div class="help-text">
-                <p>1. 输入接收邮件的邮箱地址</p>
-                <p>2. 选择上传方式（CSV文件或手动输入）</p>
-                <p>3. 点击提交，系统将处理数据并发送邮件通知</p>
-                <p>默认上传路径：/data/input/</p>
+                <p>1. Enter your email address to receive notifications</p>
+                <p>2. Choose upload method (CSV file or manual input)</p>
+                <p>3. Click Submit to process data and receive email notification</p>
+                <p>Default upload path: /data/input/</p>
                 <p style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd;">
-                    <strong>CSV 格式要求:</strong> 文件应包含恰好两列数据
+                    <strong>CSV Format:</strong> File must contain exactly 2 columns
                 </p>
             </div>
         </div>
@@ -467,7 +467,7 @@
         const status = document.getElementById('status');
         let currentPolling = null;
 
-        // 切换上传方式
+        // Switch upload method
         uploadMethod.addEventListener('change', (e) => {
             if (e.target.value === 'file') {
                 fileUploadSection.style.display = 'block';
@@ -478,7 +478,7 @@
             }
         });
 
-        // 文件拖拽上传
+        // File drag-and-drop upload
         uploadArea.addEventListener('click', () => fileInput.click());
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -497,7 +497,7 @@
             }
         });
 
-        // 文件选择
+        // File selection
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
                 displayFileName(e.target.files[0].name);
@@ -505,10 +505,10 @@
         });
 
         function displayFileName(name) {
-            fileName.textContent = `✅ 已选择: ${name}`;
+            fileName.textContent = `✅ Selected: ${name}`;
         }
 
-        // 显示消息
+        // Show message
         function showMessage(message, type = 'info') {
             const msgDiv = document.createElement('div');
             msgDiv.className = `message ${type} show`;
@@ -521,7 +521,7 @@
             }
         }
 
-        // 表单提交
+        // Form submit
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -532,29 +532,29 @@
 
             const email = document.getElementById('email').value;
             const targetPath = '/data/input/';
-            const taskName = document.getElementById('taskName').value || '未命名任务';
+            const taskName = document.getElementById('taskName').value || 'Untitled Task';
             const uploadMethod = document.getElementById('uploadMethod').value;
 
-            // 获取表格数据
+            // Get table data
             let tableData = '';
             if (uploadMethod === 'file') {
                 if (!fileInput.files.length) {
-                    showMessage('❌ 请选择一个 CSV 文件', 'error');
+                    showMessage('❌ Please select a CSV file', 'error');
                     return;
                 }
                 tableData = await readFileAsText(fileInput.files[0]);
             } else {
                 tableData = document.getElementById('tableData').value;
                 if (!tableData.trim()) {
-                    showMessage('❌ 请输入表格数据', 'error');
+                    showMessage('❌ Please enter table data', 'error');
                     return;
                 }
             }
 
-            // 验证表格数据
+            // Validate table data
             const lines = tableData.trim().split('\n');
             if (lines.length < 1) {
-                showMessage('❌ 表格数据不能为空', 'error');
+                showMessage('❌ Table data cannot be empty', 'error');
                 return;
             }
 
@@ -568,8 +568,8 @@
             progressBar.classList.add('show');
             status.classList.add('show');
             progressFill.style.width = '5%';
-            document.getElementById('statusValue').textContent = '已提交';
-            document.getElementById('stageValue').textContent = '等待服务器响应';
+            document.getElementById('statusValue').textContent = 'Submitted';
+            document.getElementById('stageValue').textContent = 'Waiting for server response';
             document.getElementById('queuePosition').textContent = '-';
             document.getElementById('processedRows').textContent = '0';
 
@@ -593,22 +593,22 @@
                 if (response.ok) {
                     document.getElementById('taskId').textContent = result.taskId;
                     document.getElementById('queuePosition').textContent = String(result.queuePosition || 0);
-                    document.getElementById('stageValue').textContent = '排队中';
+                    document.getElementById('stageValue').textContent = 'Queued';
                     progressFill.style.width = '15%';
                     
-                    showMessage(`✅ 任务已提交，当前队列位置: ${result.queuePosition || 0}。系统会邮件通知 ${email}`, 'info');
+                    showMessage(`✅ Task submitted. Current queue position: ${result.queuePosition || 0}. The system will notify ${email} by email.`, 'info');
                     startPollingStatus(result.taskId, lines.length);
                 } else {
-                    showMessage(`❌ 提交失败: ${result.message}`, 'error');
+                    showMessage(`❌ Submission failed: ${result.message}`, 'error');
                 }
             } catch (error) {
-                showMessage(`❌ 网络错误: ${error.message}`, 'error');
+                showMessage(`❌ Network error: ${error.message}`, 'error');
             } finally {
                 submitBtn.disabled = false;
             }
         });
 
-        // 读取文件内容
+        // Read file content
         function readFileAsText(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -625,16 +625,16 @@
                 .filter(line => line.length > 0);
 
             if (lines.length === 0) {
-                return { ok: false, message: '表格内容不能为空' };
+                return { ok: false, message: 'Table content cannot be empty' };
             }
 
             for (let i = 0; i < lines.length; i++) {
                 const cols = lines[i].split(/\t|,/).map(col => col.trim());
                 if (cols.length !== 2) {
-                    return { ok: false, message: `第 ${i + 1} 行不是两列` };
+                    return { ok: false, message: `Line ${i + 1} does not have exactly two columns` };
                 }
                 if (!cols[0] || !cols[1]) {
-                    return { ok: false, message: `第 ${i + 1} 行存在空值` };
+                    return { ok: false, message: `Line ${i + 1} contains empty values` };
                 }
             }
 
@@ -643,11 +643,11 @@
 
         function mapStage(stage) {
             const stageMap = {
-                queue: '排队中',
-                copy: '执行演示命令（cp）',
-                gwas: '独立容器执行（可替换真实GWAS）',
-                done: '完成',
-                failed: '失败'
+                queue: 'Queued',
+                copy: 'Copying input file (cp)',
+                gwas: 'Running GWAS in isolated container',
+                done: 'Completed',
+                failed: 'Failed'
             };
             return stageMap[stage] || stage || '-';
         }
@@ -659,7 +659,7 @@
             const logsContainer = document.getElementById('logsContainer');
             
             if (!logs || logs.length === 0) {
-                logBody.innerHTML = '<div class="log-line log-empty">暂无日志</div>';
+                logBody.innerHTML = '<div class="log-line log-empty">No logs yet</div>';
                 logsContainer.classList.add('show');
                 return;
             }
@@ -675,11 +675,11 @@
             });
             logBody.innerHTML = html;
             
-            // 自动滚动到底部
+            // Auto-scroll to bottom
             logBody.scrollTop = logBody.scrollHeight;
         }
 
-        // 日志面板切换
+        // Toggle logs panel
         document.getElementById('toggleLogsBtn').addEventListener('click', (e) => {
             e.preventDefault();
             const logBody = document.getElementById('logBody');
@@ -687,10 +687,10 @@
             logsExpanded = !logsExpanded;
             if (logsExpanded) {
                 logBody.style.display = 'block';
-                btn.textContent = '收起';
+                btn.textContent = 'Collapse';
             } else {
                 logBody.style.display = 'none';
-                btn.textContent = '展开';
+                btn.textContent = 'Expand';
             }
         });
 
@@ -701,7 +701,7 @@
                     const result = await response.json();
 
                     if (!response.ok || !result.success) {
-                        throw new Error(result.message || '状态查询失败');
+                        throw new Error(result.message || 'Status query failed');
                     }
 
                     const task = result.task;
@@ -711,7 +711,7 @@
                     document.getElementById('processedRows').textContent = `${task.processedRows || 0}/${totalRows}`;
                     progressFill.style.width = `${Math.min(100, Number(task.progress || 0))}%`;
 
-                    // 获取并显示日志
+                    // Fetch and display logs
                     try {
                         const logsResponse = await fetch(`/api/logs/${taskId}`);
                         if (logsResponse.ok) {
@@ -721,13 +721,13 @@
                             }
                         }
                     } catch (logError) {
-                        console.error('获取日志失败:', logError);
+                        console.error('Failed to fetch logs:', logError);
                     }
 
                     if (task.status === 'completed') {
                         clearInterval(currentPolling);
                         currentPolling = null;
-                        showMessage(`✅ 任务完成！你将收到邮件，或直接下载: /api/download/${taskId}`, 'success');
+                        showMessage(`✅ Task completed! You will receive an email, or download directly: /api/download/${taskId}`, 'success');
                         submitBtn.disabled = false;
                         form.reset();
                         fileName.textContent = '';
@@ -736,14 +736,14 @@
                     if (task.status === 'failed') {
                         clearInterval(currentPolling);
                         currentPolling = null;
-                        showMessage(`❌ 任务失败: ${task.message}`, 'error');
+                        showMessage(`❌ Task failed: ${task.message}`, 'error');
                         submitBtn.disabled = false;
                     }
                 } catch (error) {
                     clearInterval(currentPolling);
                     currentPolling = null;
                     submitBtn.disabled = false;
-                    showMessage(`❌ 查询状态失败: ${error.message}`, 'error');
+                    showMessage(`❌ Failed to query status: ${error.message}`, 'error');
                 }
             }, 2000);
         }

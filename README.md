@@ -1,94 +1,83 @@
-# GWAS Web 数据上传系统
+# GWAS Web Data Upload System
 
-一个功能完整的网页应用，用于上传两列表格数据到 Docker 环境进行处理。该系统支持文件上传、数据处理、邮件通知和结果下载等功能。
+A complete web application for uploading two-column table data to a Docker environment for processing. The system supports file upload, asynchronous task processing, email notifications, and result download.
 
-## 功能特性
+## Features
 
-✨ **核心功能**
-- 📤 支持 CSV 文件上传或手动输入表格数据
-- 🐳 自动推送数据到 Docker 容器（使用 `docker cp` 命令）
-- 📧 任务完成后自动发送邮件通知
-- 📥 提供结果文件下载功能
-- 🔍 实时任务状态查询
-- 🎨 现代化的响应式网页界面
+- CSV file upload or manual table input
+- Automatic file copy into Docker container via `docker cp`
+- Email notification when a task completes or fails
+- Downloadable task result file
+- Real-time task status polling
+- Responsive browser UI
 
-## 系统架构
+## Architecture
 
-```
+```text
 ┌─────────────────────┐
-│   前端网页 (HTML)    │
-│  - 文件上传         │
-│  - 表格输入         │
+│ Frontend (HTML/JS)  │
+│ - File upload       │
+│ - Manual input      │
 └──────────┬──────────┘
            │
 ┌──────────▼──────────┐
-│  Express 服务器     │
-│  - 接收上传         │
-│  - Docker CP        │
-│  - 邮件发送         │
+│ Express Server      │
+│ - Accepts requests  │
+│ - Docker copy/run   │
+│ - Sends emails      │
 └──────────┬──────────┘
            │
     ┌──────┴──────┐
     │             │
 ┌───▼────┐   ┌───▼──────┐
-│ Docker │   │ 邮件服务 │
-│容器    │   │ (SMTP)  │
-└────────┘   └─────────┘
+│ Docker │   │ SMTP     │
+│ Worker │   │ Service  │
+└────────┘   └──────────┘
 ```
 
-## 快速开始
+## Quick Start
 
-### 前置条件
+### Prerequisites
 
-- Docker & Docker Compose
-- Node.js 14+ (本地开发)
-- 现代浏览器
+- Docker and Docker Compose
+- Node.js 14+ (for local development)
+- A modern browser
 
-### 使用 Docker Compose 启动（推荐）
+### Start with Docker Compose (recommended)
 
 ```bash
-# 1. 复制环境配置文件
+# 1) Copy environment template
 cp .env.example .env
 
-# 编辑 .env 文件配置邮件服务（可选）
+# Optional: configure SMTP in .env
 # SMTP_USER=your-email@gmail.com
-# SMTP_PASS=your-password
+# SMTP_PASS=your-app-password
 # SMTP_FROM=noreply@gwas.local
 
-# 2. 构建并启动所有服务
+# 2) Build and start services
 docker-compose up -d
 
-# 3. 查看日志
+# 3) Follow logs
 docker-compose logs -f gwas-web
 
-# 4. 访问应用
-# 网页: http://localhost:3000
-# 邮件测试: http://localhost:8025 (MailHog)
+# 4) Open the app
+# Web app:  http://localhost:3000
+# MailHog:  http://localhost:8025
 ```
 
-### 本地开发（不使用 Docker）
+### Local Development (without Docker app container)
 
 ```bash
-# 1. 复制环境配置
 cp .env.example .env
-
-# 2. 安装依赖
 npm install
-
-# 3. 启动服务器
 npm start
-
-# 4. 访问应用
-# http://localhost:3000
 ```
 
-### 使用 Docker 容器启动
+### Build and run app image manually
 
 ```bash
-# 构建镜像
 docker build -t gwas-web:latest .
 
-# 运行容器
 docker run -p 3000:3000 \
   -e DOCKER_CONTAINER=gwas-worker \
   -v /var/run/docker.sock:/var/run/docker.sock \
@@ -96,104 +85,85 @@ docker run -p 3000:3000 \
   gwas-web:latest
 ```
 
-## 配置说明
+## Configuration
 
-### 环境变量 (.env)
+### Environment variables
 
-| 变量 | 说明 | 默认值 |
-|------|------|--------|
-| `PORT` | 服务器端口 | 3000 |
-| `DOCKER_CONTAINER` | 目标 Docker 容器名 | gwas-worker |
-| `SMTP_HOST` | SMTP 服务器地址 | localhost |
-| `SMTP_PORT` | SMTP 端口 | 587 |
-| `SMTP_SECURE` | 是否使用 SSL | false |
-| `SMTP_USER` | SMTP 用户名 | 空 |
-| `SMTP_PASS` | SMTP 密码 | 空 |
-| `SMTP_FROM` | 发件人邮箱 | noreply@gwas.local |
+| Variable | Description | Default |
+|---|---|---|
+| `PORT` | Server port | `3000` |
+| `DOCKER_CONTAINER` | Target Docker container name | `gwas-worker` |
+| `SMTP_HOST` | SMTP host | `localhost` |
+| `SMTP_PORT` | SMTP port | `587` |
+| `SMTP_SECURE` | Use TLS/SSL | `false` |
+| `SMTP_USER` | SMTP username | empty |
+| `SMTP_PASS` | SMTP password | empty |
+| `SMTP_FROM` | Sender address | `noreply@gwas.local` |
+| `MAX_CONCURRENT_TASKS` | Max tasks running in parallel | `2` |
+| `PROCESSING_DELAY_MS` | Demo delay (ms) | `3000` |
+| `BASE_URL` | Public base URL in emails | `http://localhost:3000` |
+| `GWAS_RUNNER_IMAGE` | Runner image tag | `gwas-worker:latest` |
 
-### Docker Compose 服务
+### Docker Compose services
 
-- **gwas-web**: Node.js 应用服务 (端口 3000)
-- **gwas-worker**: Ubuntu 处理容器 (接收文件)
-- **mailserver**: MailHog 邮件服务 (SMTP: 1025, Web: 8025)
+- `gwas-web`: Node.js API + frontend (`3000`)
+- `gwas-worker`: processing container and shared volumes
+- `mailserver`: MailHog SMTP (`1025`) + UI (`8025`)
 
-## API 端点
+## API Endpoints
 
-### 上传表格数据
+### Upload table data
 
-**请求:**
-```
+Request:
+
+```http
 POST /api/upload
 Content-Type: application/json
+```
 
+```json
 {
   "email": "user@example.com",
   "targetPath": "/data/input/",
-  "taskName": "我的任务",
+  "taskName": "My Task",
   "tableData": "column1\tcolumn2\ndata1\tdata2\ndata3\tdata4",
   "rowCount": 2
 }
 ```
 
-**响应:**
+Typical response:
+
 ```json
 {
   "success": true,
   "taskId": "550e8400-e29b-41d4-a716-446655440000",
-  "message": "任务已接收，正在处理中..."
+  "message": "Task received and queued for processing..."
 }
 ```
 
-### 查询任务状态
+### Query task status
 
-**请求:**
-```
+```http
 GET /api/status/{taskId}
 ```
 
-**响应:**
-```json
-{
-  "success": true,
-  "task": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "status": "completed",
-    "taskName": "我的任务",
-    "rowCount": 2,
-    "processedRows": 2,
-    "message": "✅ 成功复制 2 行数据到 /data/input/",
-    "createdAt": "2024-04-03T10:30:00.000Z"
-  }
-}
-```
+### Download result
 
-### 下载结果
-
-**请求:**
-```
+```http
 GET /api/download/{taskId}
 ```
 
-**响应:** 返回结果文件 (text/plain)
+### Health check
 
-### 健康检查
-
-**请求:**
-```
+```http
 GET /health
 ```
 
-**响应:**
-```json
-{
-  "status": "ok",
-  "timestamp": "2024-04-03T10:30:00.000Z"
-}
-```
+## Table Format
 
-## 表格数据格式
+Use exactly two columns per non-empty line.
 
-### CSV 文件格式
+CSV example:
 
 ```csv
 column1,column2
@@ -201,53 +171,26 @@ data1,data2
 data3,data4
 ```
 
-或使用制表符分隔：
+Tab-separated example:
 
-```
+```text
 column1	column2
 data1	data2
 data3	data4
 ```
 
-### 手动输入格式
+## Workflow
 
-支持以下两种分隔符：
-- 制表符 (Tab)
-- 逗号 (,)
+1. User submits email + table data.
+2. Server validates and stores a temporary input file.
+3. Task enters queue and is processed asynchronously.
+4. Input file is copied into worker container.
+5. GWAS script is executed in container.
+6. User gets completion/failure email and can download results.
 
-示例：
-```
-Name	Age
-Alice	25
-Bob	30
-```
+## SMTP Examples
 
-## 工作流程
-
-1. **用户输入**
-   - 输入接收邮箱
-   - 上传 CSV 文件或手动输入表格
-   - 指定 Docker 容器目标路径
-   - 提交表单
-
-2. **后端处理**
-   - 接收表格数据
-   - 生成临时文件
-   - 异步执行 `docker cp` 命令
-   - 更新任务状态
-
-3. **邮件通知**
-   - 任务完成后发送邮件
-   - 包含下载链接
-   - 错误情况下发送失败通知
-
-4. **结果下载**
-   - 用户可通过邮件链接下载结果
-   - 或通过 `/api/download/{taskId}` 端点下载
-
-## 邮件配置示例
-
-### 使用 Gmail
+### Gmail
 
 ```env
 SMTP_HOST=smtp.gmail.com
@@ -258,9 +201,7 @@ SMTP_PASS=your-app-password
 SMTP_FROM=your-email@gmail.com
 ```
 
-> 注: Gmail 需要使用 [App Password](https://myaccount.google.com/apppasswords)
-
-### 使用公司邮件服务器
+### Company SMTP
 
 ```env
 SMTP_HOST=mail.company.com
@@ -271,84 +212,59 @@ SMTP_PASS=password
 SMTP_FROM=noreply@company.com
 ```
 
-### 本地测试 (MailHog)
+### Local test with MailHog
 
-使用 Docker Compose 已预置了 MailHog，无需额外配置。访问 http://localhost:8025 查看邮件。
+MailHog is preconfigured in Docker Compose. Open http://localhost:8025.
 
-## 常见问题
+## FAQ
 
-### Q: 如何修改 Docker 容器名称？
-A: 编辑 `.env` 文件，修改 `DOCKER_CONTAINER` 变量，或在 `docker-compose.yml` 中修改 `container_name`。
+### How do I change the Docker container name?
 
-### Q: Docker copy 失败怎么办？
-A: 
-- 检查目标容器是否正在运行: `docker ps`
-- 检查目标路径是否存在于容器中
-- 查看查看服务器日志: `docker-compose logs gwas-web`
+Set `DOCKER_CONTAINER` in `.env`, or update `container_name` in `docker-compose.yml`.
 
-### Q: 为什么没有收到邮件？
-A:
-- 检查 SMTP 配置是否正确
-- 对于 Gmail，确保使用了 App Password
-- 在 MailHog 中检查邮件: http://localhost:8025
+### What if docker copy fails?
 
-### Q: 上传的文件在哪里？
-A: 文件保存在 `./uploads` 目录中，处理完成后会自动删除。
+- Verify target container is running: `docker ps`
+- Verify target path exists in the container
+- Check app logs: `docker-compose logs gwas-web`
 
-## 文件结构
+### Why did I not receive any email?
 
-```
+- Verify SMTP configuration
+- For Gmail, use an app password
+- Check MailHog inbox at http://localhost:8025
+
+### Where are uploaded files stored?
+
+Temporary files are written under `./uploads` and removed after processing.
+
+## Project Structure
+
+```text
 gwas-web-test/
 ├── public/
-│   └── index.html              # 前端页面
-├── server.js                   # Express 服务器
-├── package.json                # Node.js 依赖
-├── Dockerfile                  # Docker 镜像配置
-├── docker-compose.yml          # Docker Compose 配置
-├── .env.example                # 环境变量示例
-├── .gitignore                  # Git 忽略文件
-└── README.md                   # 本文件
+│   └── index.html
+├── server.js
+├── package.json
+├── Dockerfile
+├── docker-compose.yml
+├── .env.example
+└── README.md
 ```
 
-## 部署建议
+## Production Notes
 
-### 生产环境
+1. Use a real SMTP provider (Gmail/SendGrid/etc).
+2. Add HTTPS through a reverse proxy (Nginx/Caddy).
+3. Replace in-memory task storage with a database.
+4. Add authentication and request rate limits.
+5. Add log retention and monitoring.
+6. Add periodic cleanup and backups for volumes.
 
-1. **使用真实的 SMTP 服务器**（Gmail、SendGrid 等）
-2. **配置 HTTPS**（使用 Nginx 反向代理）
-3. **使用数据库存储任务信息**（替代内存存储）
-4. **添加认证机制**（防止滥用）
-5. **设置请求限流**（保护 API）
-6. **配置文件清理策略**（自动删除旧文件）
-7. **添加错误日志和监控**
-
-### 推荐架构
-
-```
-┌──────────────────┐
-│   HTTPS Reverse  │
-│   Proxy (Nginx)  │
-└────────┬─────────┘
-         │
-┌────────▼─────────┐
-│   Load Balancer  │
-└────────┬─────────┘
-    ┌────┴────┐
-    │          │
-┌───▼──┐  ┌───▼──┐
-│gwas1 │  │gwas2 │  (多实例)
-└───┬──┘  └───┬──┘
-    │         │
-    └────┬────┘
-  ┌─────▼──────┐
-  │  Database  │  (存储任务状态)
-  └────────────┘
-```
-
-## 许可证
+## License
 
 MIT
 
-## 支持和联系
+## Support
 
-如有问题或建议，请提交 Issue 或 PR。
+Open an issue or pull request for bugs, suggestions, or improvements.

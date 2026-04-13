@@ -1,23 +1,23 @@
-# 基础镜像
+# Base image
 FROM node:18-alpine
 
-# 设置工作目录
+# Set working directory
 WORKDIR /app
 
-# 安装 docker 客户端，用于执行 docker cp / docker exec
+# Install Docker CLI for docker cp / docker exec
 RUN apk add --no-cache docker-cli
 
-# 复制 package 文件
+# Copy package files
 COPY package*.json ./
 
-# 安装依赖
+# Install dependencies
 RUN npm install --production
 
-# 复制应用代码
+# Copy application code
 COPY . .
 
-# 暴露端口
+# Expose port
 EXPOSE 3000
 
-# 启动应用
+# Start application
 CMD ["npm", "start"]

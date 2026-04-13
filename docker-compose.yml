@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # GWAS Web 应用服务
+  # GWAS Web application service
   gwas-web:
     build: .
     container_name: gwas-web
@@ -21,20 +21,19 @@ services:
       - ./uploads:/app/uploads
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
-      - gwas-worker
       - mailserver
     networks:
       - gwas-network
     restart: unless-stopped
 
-  # GWAS 处理工作容器
+  # GWAS worker container
   gwas-worker:
     build:
       context: .
       dockerfile: Dockerfile.gwas-worker
     image: gwas-worker:latest
     container_name: gwas-worker
-    # 保持容器运行以接收文件
+    # Keep container running to receive files
     command: /bin/bash -c "mkdir -p /data/input /data/output && tail -f /dev/null"
     volumes:
       - gwas-data-input:/data/input
@@ -44,13 +43,13 @@ services:
       - gwas-network
     restart: unless-stopped
 
-  # 邮件服务器（开发环境使用 MailHog）
+  # Mail server (MailHog for development)
   mailserver:
     image: mailhog/mailhog:latest
     container_name: gwas-mailserver
     ports:
-      - "1025:1025"  # SMTP 端口
-      - "8025:8025"  # Web UI 端口
+      - "1025:1025"  # SMTP port
+      - "8025:8025"  # Web UI port
     networks:
       - gwas-network
     restart: unless-stopped

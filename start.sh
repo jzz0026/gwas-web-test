@@ -1,140 +1,144 @@
 #!/bin/bash
 
-# 颜色定义
+# Color definitions
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# 函数：打印标题
+# Function: print header
 print_header() {
     echo -e "${BLUE}========================================${NC}"
     echo -e "${BLUE}$1${NC}"
     echo -e "${BLUE}========================================${NC}"
 }
 
-# 函数：打印成功信息
+# Function: print success message
 print_success() {
     echo -e "${GREEN}✅ $1${NC}"
 }
 
-# 函数：打印错误信息
+# Function: print error message
 print_error() {
     echo -e "${RED}❌ $1${NC}"
 }
 
-# 函数：打印警告信息
+# Function: print warning message
 print_warning() {
     echo -e "${YELLOW}⚠️  $1${NC}"
 }
 
-# 函数：打印信息
+# Function: print info message
 print_info() {
     echo -e "${BLUE}ℹ️  $1${NC}"
 }
 
-# 主程序
+# Main program
 main() {
-    print_header "GWAS Web 系统初始化"
+    print_header "GWAS Web System Initialization"
 
-    # 检查 Docker 和 Docker Compose
+    # Check Docker and Docker Compose
     if ! command -v docker &> /dev/null; then
-        print_error "Docker 未安装"
+        print_error "Docker is not installed"
         exit 1
     fi
-    print_success "Docker 已安装"
+    print_success "Docker is installed"
 
     if ! command -v docker-compose &> /dev/null; then
-        print_warning "Docker Compose 未安装，尝试使用 docker compose"
+        print_warning "docker-compose not found, trying docker compose"
         COMPOSE_CMD="docker compose"
         if ! docker compose version &> /dev/null; then
-            print_error "Docker Compose 不可用"
+            print_error "Docker Compose is not available"
             exit 1
         fi
     else
         COMPOSE_CMD="docker-compose"
     fi
-    print_success "Docker Compose 可用"
+    print_success "Docker Compose is available"
 
-    # 检查 Node.js（用于本地开发）
+    # Check Node.js (for local development)
     if command -v node &> /dev/null; then
-        print_success "Node.js 已安装 ($(node --version))"
+        print_success "Node.js is installed ($(node --version))"
     else
-        print_warning "Node.js 未安装"
+        print_warning "Node.js is not installed"
     fi
 
-    # 复制 .env 文件
+    # Create .env file if needed
     if [ ! -f ".env" ]; then
-        print_info "创建 .env 文件..."
+        print_info "Creating .env file..."
         if [ -f ".env.example" ]; then
             cp .env.example .env
-            print_success ".env 文件已创建（请根据需要编辑）"
+            print_success ".env file created (edit it as needed)"
         else
-            print_error ".env.example 文件不存在"
+            print_error ".env.example file does not exist"
             exit 1
         fi
     else
-        print_success ".env 文件已存在"
+        print_success ".env file already exists"
     fi
 
-    # 选择启动方式
+    # Choose startup mode
     echo ""
-    print_header "选择启动方式"
-    echo "1) Docker Compose 启动（推荐，包含邮件服务）"
-    echo "2) 本地开发启动（需要 Node.js）"
-    echo "3) 仅启动 Docker 工作容器"
+    print_header "Choose startup mode"
+    echo "1) Start with Docker Compose (recommended, includes mail service)"
+    echo "2) Start for local development (requires Node.js)"
+    echo "3) Start only Docker worker container"
     echo ""
-    read -p "请选择 [1-3]: " choice
+    read -p "Please choose [1-3]: " choice
 
     case $choice in
         1)
-            print_header "Docker Compose 启动"
-            print_info "构建镜像并启动服务..."
+            print_header "Docker Compose startup"
+            print_info "Building images and starting services..."
             $COMPOSE_CMD down
-            $COMPOSE_CMD up -d
+            $COMPOSE_CMD up -d gwas-web mailserver gwas-worker
+
+            # Keep worker created but stopped; it will be started when a task runs.
+            $COMPOSE_CMD stop gwas-worker
             
-            # 等待服务启动
+            # Wait for services to start
             sleep 3
             
-            # 检查服务状态
+            # Check service status
             echo ""
-            print_header "服务状态"
+            print_header "Service status"
             $COMPOSE_CMD ps
             
             echo ""
-            print_success "所有服务已启动！"
+            print_success "Web and mail services are up. Worker is standby (stopped)."
             echo ""
-            print_info "📍 访问 Web 应用: ${GREEN}http://localhost:3000${NC}"
-            print_info "📧 访问 MailHog: ${GREEN}http://localhost:8025${NC}"
-            print_info "📋 查看日志: ${YELLOW}docker-compose logs -f gwas-web${NC}"
-            print_info "停止服务: ${YELLOW}docker-compose down${NC}"
+            print_info "📍 Web app: ${GREEN}http://localhost:3000${NC}"
+            print_info "📧 MailHog: ${GREEN}http://localhost:8025${NC}"
+            print_info "🧬 Worker mode: starts on task submission, stops after task completion"
+            print_info "📋 View logs: ${YELLOW}docker-compose logs -f gwas-web${NC}"
+            print_info "Stop services: ${YELLOW}docker-compose down${NC}"
             ;;
         2)
-            print_header "本地开发启动"
+            print_header "Local development startup"
             if ! command -v node &> /dev/null; then
-                print_error "Node.js 未安装，无法本地启动"
+                print_error "Node.js is not installed, cannot start locally"
                 exit 1
             fi
             
-            print_info "安装依赖..."
+            print_info "Installing dependencies..."
             npm install
             
-            print_info "启动服务..."
+            print_info "Starting service..."
             npm start
             ;;
         3)
-            print_header "启动 Docker 工作容器"
+            print_header "Start Docker worker container"
             $COMPOSE_CMD up -d gwas-worker mailserver
-            print_success "容器已启动"
+            print_success "Containers started"
             $COMPOSE_CMD ps
             ;;
         *)
-            print_error "无效的选择"
+            print_error "Invalid selection"
             exit 1
             ;;
     esac
 }
 
-# 运行主程序
+# Run main program
 main

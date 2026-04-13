@@ -1,33 +1,30 @@
-# 🚀 GWAS Web 快速开始指南
+# GWAS Web Quick Start
 
-## ⚡ 3 分钟快速启动
+## Start in 3 Minutes
 
-### 前置要求
-- ✅ Docker & Docker Compose 已安装
-- ✅ 至少 2GB 可用内存
+### Requirements
 
-### 启动步骤
+- Docker and Docker Compose installed
+- At least 2 GB free memory
 
-#### 方式 1：一键启动（推荐）
+## Startup Options
+
+### Option 1: One-command startup (recommended)
 
 ```bash
-# 进入项目目录
 cd gwas-web-test
-
-# 运行启动脚本
 bash start.sh
-
-# 选择第 1 项：Docker Compose 启动
+# Choose option 1 in the menu
 ```
 
-#### 方式 2：手动 Docker Compose 启动
+### Option 2: Manual Docker Compose startup
 
 ```bash
 cd gwas-web-test
 docker-compose up -d
 ```
 
-#### 方式 3：本地开发启动
+### Option 3: Local development startup
 
 ```bash
 cd gwas-web-test
@@ -35,40 +32,38 @@ npm install
 npm start
 ```
 
-## 🌐 访问应用
+## Open the Application
 
-启动完成后，打开浏览器访问：
+| Service | URL | Purpose |
+|---|---|---|
+| Web App | http://localhost:3000 | Main UI |
+| MailHog | http://localhost:8025 | Email testing inbox |
 
-| 应用 | 地址 | 说明 |
-|------|------|------|
-| 🌐 Web 应用 | http://localhost:3000 | 主要应用界面 |
-| 📧 MailHog | http://localhost:8025 | 邮件测试工具 |
+## Quick Test Flow
 
-## 📤 快速测试
+### 1) Upload a table
 
-### 1. 上传表格
+1. Open http://localhost:3000
+2. Enter your email address
+3. Choose upload mode:
+4. `Upload CSV/TSV File` for a two-column file, or
+5. `Enter Data Manually` for direct paste
+6. Click `Submit Task`
 
-1. 打开 http://localhost:3000
-2. 输入邮箱地址
-3. 选择上传方式：
-   - **上传 CSV 文件**: 上传包含两列的 CSV 文件
-   - **手动输入**: 直接输入表格数据
-4. 指定目标路径（默认: `/data/input/`）
-5. 点击 **提交任务**
+### 2) Track progress
 
-### 2. 查看处理进度
+- A task ID is returned immediately
+- Processing runs asynchronously in queue
+- Status and logs update in the UI
 
-- 任务提交后立即返回任务 ID
-- 系统异步处理数据
-- 完成后发送邮件通知
+### 3) Check email notification
 
-### 3. 查看邮件
+Open http://localhost:8025 to view outgoing email in MailHog.
 
-访问 http://localhost:8025 查看发送的邮件
+## Sample Data
 
-## 📝 示例数据
+### CSV format
 
-### CSV 格式
 ```csv
 gene_name,expression_level
 GENE001,2.5
@@ -76,76 +71,98 @@ GENE002,3.8
 GENE003,1.2
 ```
 
-### 手动输入格式
-```
+### Tab-separated format
+
+```text
 gene_name	expression_level
 GENE001	2.5
 GENE002	3.8
 GENE003	1.2
 ```
 
-## 📋 常用命令
+## Useful Commands
 
 ```bash
-# 查看所有容器状态
+# Container status
 docker-compose ps
 
-# 查看应用日志
+# App logs
 docker-compose logs -f gwas-web
 
-# 停止服务
+# Stop all services
 docker-compose down
 
-# 重启应用
+# Restart app
 docker-compose restart gwas-web
 
-# 进入工作容器
+# Enter worker container
 docker-compose exec gwas-worker bash
 
-# 查看上传到容器的文件
+# List uploaded files in worker container
 docker-compose exec gwas-worker ls -la /data/input/
 ```
 
-## 🔧 配置修改
+## Common Config Changes
 
-编辑 `.env` 文件可修改以下配置：
+Edit `.env`:
 
 ```env
-PORT=3000                      # 应用端口
-DOCKER_CONTAINER=gwas-worker   # 目标容器名
-SMTP_HOST=mailserver           # 邮件服务器
-SMTP_PORT=1025                 # 邮件端口
+PORT=3000
+DOCKER_CONTAINER=gwas-worker
+SMTP_HOST=mailserver
+SMTP_PORT=1025
 ```
 
-## ❓ 常见问题
+## FAQ
 
-**Q: 如何修改邮件配置？**
-A: 编辑 `.env` 文件中的 SMTP 配置，然后重启应用: `docker-compose restart gwas-web`
+### How do I change SMTP settings?
 
-**Q: 如何查看上传的数据？**
-A: 运行 `docker-compose exec gwas-worker ls -la /data/input/`
+Edit SMTP values in `.env` and restart the app:
 
-**Q: 邮件没有发出怎么办？**
-A: 访问 http://localhost:8025 查看 MailHog，或检查日志: `docker-compose logs gwas-web | grep -i mail`
+```bash
+docker-compose restart gwas-web
+```
 
-**Q: Docker CP 失败？**
-A: 检查 `.env` 中的 `DOCKER_CONTAINER` 是否正确，运行 `docker-compose ps` 确认容器在运行
+### How do I inspect uploaded data?
 
-**Q: 如何在生产环境上使用？**
-A: 参考 [DEPLOYMENT.md](./DEPLOYMENT.md) 获取详细指南
+```bash
+docker-compose exec gwas-worker ls -la /data/input/
+```
 
-## 📚 更多信息
+### What if email is not sent?
 
-- 📖 完整文档: [README.md](./README.md)
-- 🚀 部署指南: [DEPLOYMENT.md](./DEPLOYMENT.md)
-- 🧪 API 测试: `bash test-api.sh`
+Check MailHog at http://localhost:8025 and review logs:
 
-## 🆘 获取帮助
+```bash
+docker-compose logs gwas-web | grep -i mail
+```
 
-1. 查看日志: `docker-compose logs`
-2. 测试 API: `bash test-api.sh`
-3. 查看文档中的常见问题
+### What if Docker copy fails?
 
----
+Check `DOCKER_CONTAINER` in `.env`, then verify the container is running:
 
-**开始使用：** `bash start.sh` ✨
+```bash
+docker-compose ps
+```
+
+### How do I deploy this in production?
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md).
+
+## More Resources
+
+- Full docs: [README.md](./README.md)
+- Deployment guide: [DEPLOYMENT.md](./DEPLOYMENT.md)
+- API test script: `bash test-api.sh`
+
+## Need Help?
+
+1. Check logs: `docker-compose logs`
+2. Run API test: `bash test-api.sh`
+3. Review FAQ in docs
+
+Start now:
+
+```bash
+bash start.sh
+```

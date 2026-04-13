@@ -15,21 +15,21 @@ const PROCESSING_DELAY_MS = Number(process.env.PROCESSING_DELAY_MS || 3000);
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 const GWAS_RUNNER_IMAGE = process.env.GWAS_RUNNER_IMAGE || 'gwas-worker:latest';
 
-// 中间件配置
+// Middleware configuration
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static('public'));
 
-// 创建上传目录
+// Create uploads directory
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir);
 }
 
-// Multer 配置
+// Multer configuration
 const upload = multer({ dest: uploadsDir });
 
-// 邮件配置
+// Email configuration
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'localhost',
     port: process.env.SMTP_PORT || 587,
@@ -40,14 +40,14 @@ const transporter = nodemailer.createTransport({
     } : undefined
 });
 
-// 任务存储（简单的内存存储，生产环境应使用数据库）
+// Task storage (simple in-memory storage; use database in production)
 const tasks = {};
 const taskQueue = [];
-const taskLogs = {};  // 存储每个任务的日志
+const taskLogs = {};  // Store each task's logs
 let activeTaskCount = 0;
 
 /**
- * 执行命令（无 shell，避免注入风险）
+ * Execute command (no shell; avoid injection risk)
  */
 function runCommand(command, args = []) {
     return new Promise((resolve, reject) => {
@@ -68,7 +68,7 @@ function runCommand(command, args = []) {
 }
 
 /**
- * 获取任务排队位置（从 1 开始，0 代表不在队列中）
+ * Get task queue position (1-based; 0 = not in queue)
  */
 function getQueuePosition(taskId) {
     const index = taskQueue.indexOf(taskId);
@@ -76,54 +76,54 @@ function getQueuePosition(taskId) {
 }
 
 /**
- * 更新队列中任务的排队位置
+ * Update queue positions for queued tasks
  */
 function updateQueuedPositions() {
     taskQueue.forEach((id, index) => {
         if (tasks[id]) {
             tasks[id].queuePosition = index + 1;
-            tasks[id].message = `任务排队中，前方还有 ${index} 个任务`;
+            tasks[id].message = `Task queued, ${index} tasks ahead`;
         }
     });
 }
 
 /**
- * 睡眠函数，用于模拟 GWAS 处理耗时
+ * Sleep function for simulating GWAS processing time
  */
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
- * 验证目标路径，避免目录穿越和危险字符
+ * Validate target path; prevent directory traversal and dangerous characters
  */
 function validateTargetPath(targetPath) {
     if (!targetPath || typeof targetPath !== 'string') {
-        return { ok: false, message: '目标路径不能为空' };
+        return { ok: false, message: 'Target path cannot be empty' };
     }
 
     const trimmed = targetPath.trim();
     if (!trimmed.startsWith('/')) {
-        return { ok: false, message: '目标路径必须是绝对路径（以 / 开头）' };
+        return { ok: false, message: 'Target path must be an absolute path (start with /)' };
     }
 
     if (trimmed.includes('..')) {
-        return { ok: false, message: '目标路径不能包含 ..' };
+        return { ok: false, message: 'Target path cannot contain ..' };
     }
 
     if (!/^\/[a-zA-Z0-9_./-]*$/.test(trimmed)) {
-        return { ok: false, message: '目标路径包含非法字符' };
+        return { ok: false, message: 'Target path contains illegal characters' };
     }
 
     return { ok: true, value: trimmed };
 }
 
 /**
- * 验证并解析两列表格
+ * Validate and parse two-column table data
  */
 function validateAndParseTableData(tableData) {
     if (!tableData || typeof tableData !== 'string') {
-        return { ok: false, message: '表格内容不能为空' };
+        return { ok: false, message: 'Table content cannot be empty' };
     }
 
     const lines = tableData
@@ -132,7 +132,7 @@ function validateAndParseTableData(tableData) {
         .filter((line) => line.length > 0);
 
     if (lines.length === 0) {
-        return { ok: false, message: '表格内容不能为空' };
+        return { ok: false, message: 'Table content cannot be empty' };
     }
 
     const rows = [];
@@ -143,23 +143,23 @@ function validateAndParseTableData(tableData) {
         if (columns.length !== 2) {
             return {
                 ok: false,
-                message: `第 ${i + 1} 行不是两列数据，请确保每行恰好两列`
+                message: `Line ${i + 1} does not have exactly two columns`
             };
         }
 
         if (!columns[0] || !columns[1]) {
             return {
                 ok: false,
-                message: `第 ${i + 1} 行存在空值，请补全两列`
+                message: `Line ${i + 1} contains empty values`
             };
         }
 
-        // 允许字母、数字、空格和常见符号，拒绝明显命令注入字符
+        // Allow letters, numbers, spaces and common symbols; reject obvious command-injection characters
         const illegalPattern = /[;&|`$<>]/;
         if (illegalPattern.test(columns[0]) || illegalPattern.test(columns[1])) {
             return {
                 ok: false,
-                message: `第 ${i + 1} 行包含非法字符（;&|\`$<>）`
+                message: `Line ${i + 1} contains illegal characters (;&|\`$<>)`
             };
         }
 
@@ -170,31 +170,31 @@ function validateAndParseTableData(tableData) {
 }
 
 /**
- * 执行 cp 命令到 Docker 容器
+ * Execute cp command to Docker container
  */
 async function executeCopyCommand(filePath, targetPath, containerName) {
     const remoteDir = targetPath.endsWith('/') ? targetPath : `${targetPath}/`;
     const remoteFilePath = path.posix.join(remoteDir, path.basename(filePath));
 
-    console.log(`[Docker CP] 创建目标目录: ${containerName}:${remoteDir}`);
+    console.log(`[Docker CP] Creating target directory: ${containerName}:${remoteDir}`);
     await runCommand('docker', ['exec', containerName, 'mkdir', '-p', remoteDir]);
 
-    console.log(`[Docker CP] 执行命令: docker cp ${filePath} ${containerName}:${remoteFilePath}`);
+    console.log(`[Docker CP] Executing command: docker cp ${filePath} ${containerName}:${remoteFilePath}`);
     const copyResult = await runCommand('docker', ['cp', filePath, `${containerName}:${remoteFilePath}`]);
 
     return {
         success: true,
-        message: `文件已成功复制到 Docker 容器: ${remoteFilePath}`,
+        message: `File copied successfully to Docker container: ${remoteFilePath}`,
         stdout: copyResult.stdout,
         remoteFilePath
     };
 }
 
 /**
- * 执行 GWAS 脚本（在 Docker 容器中执行）
+ * Execute GWAS script in Docker container
  */
 async function executeRunnerTask(sharedContainerName, inputFilePath, taskId) {
-    // 初始化日志
+    // Initialize task logs
     if (!taskLogs[taskId]) {
         taskLogs[taskId] = [];
     }
@@ -207,26 +207,26 @@ async function executeRunnerTask(sharedContainerName, inputFilePath, taskId) {
 
     const outputPath = `/data/output/output_${taskId}`;
 
-    addLog(`容器名称: ${sharedContainerName}`);
-    addLog(`输入 phenotype 文件: ${inputFilePath}`);
-    addLog(`结果目录: ${outputPath}`);
-    addLog(`在容器中执行命令: cd /opt/gwasScripts && bash ./06_run_gwas.sh 31 <uploaded_pheno_file> 4 <output_dir>`);
-    addLog(`开始执行GWAS分析...`);
+    addLog(`Container name: ${sharedContainerName}`);
+    addLog(`Input phenotype: ${inputFilePath}`);
+    addLog(`Output directory: ${outputPath}`);
+    addLog(`Execute: cd /opt/gwasScripts && bash ./06_run_gwas.sh 31 <uploaded_pheno_file> 4 <output_dir>`);
+    addLog(`Starting GWAS analysis...`);
 
     return new Promise((resolve, reject) => {
         const escapedInputFilePath = String(inputFilePath).replace(/"/g, '\\"');
         const escapedOutputPath = String(outputPath).replace(/"/g, '\\"');
-        // 在容器中执行脚本，先 cd 到脚本目录
+        // Execute script inside container after changing to script directory
         const child = require('child_process').exec(
             `docker exec ${sharedContainerName} bash -c "set -e; cd /opt/gwasScripts && bash ./06_run_gwas.sh 31 \"${escapedInputFilePath}\" 4 \"${escapedOutputPath}\""`,
             {
-                maxBuffer: 20 * 1024 * 1024  // 20MB 缓冲区
+                maxBuffer: 20 * 1024 * 1024  // 20MB buffer
             },
             (error, stdout, stderr) => {
                 if (error) {
-                    addLog(`❌ 执行失败: ${error.message}`);
+                    addLog(`❌ Execution failed: ${error.message}`);
                     if (stderr) {
-                        addLog(`错误日志:\n${stderr}`);
+                        addLog(`Error log:\n${stderr}`);
                     }
                     reject({
                         success: false,
@@ -237,7 +237,7 @@ async function executeRunnerTask(sharedContainerName, inputFilePath, taskId) {
                     return;
                 }
 
-                addLog(`✅ 执行成功`);
+                addLog(`✅ Execution successful`);
                 if (stdout) {
                     const lines = stdout.split('\n').filter(l => l.trim());
                     lines.forEach(line => addLog(`OUTPUT: ${line}`));
@@ -246,13 +246,13 @@ async function executeRunnerTask(sharedContainerName, inputFilePath, taskId) {
                 resolve({
                     success: true,
                     outputPath,
-                    message: `GWAS 分析完成，结果位于容器内 ${outputPath}`,
+                    message: `GWAS analysis complete. Results at ${outputPath}`,
                     stdout
                 });
             }
         );
 
-        // 实时捕获输出
+        // Capture output in real time
         if (child.stdout) {
             child.stdout.on('data', (data) => {
                 const lines = data.toString().split('\n').filter(l => l.trim());
@@ -269,32 +269,35 @@ async function executeRunnerTask(sharedContainerName, inputFilePath, taskId) {
 }
 
 /**
- * 发送邮件通知
+ * Send email notification
  */
 async function sendNotificationEmail(email, taskId, taskName, status, message, downloadUrl = '') {
+    const statusColor = status === 'success' ? 'green' : 'red';
+    const statusText = status === 'success' ? '✅ Success' : '❌ Failed';
+    
     const mailOptions = {
         from: process.env.SMTP_FROM || 'noreply@gwas.local',
         to: email,
-        subject: `GWAS 任务通知 - ${taskName} [${taskId}]`,
+        subject: `GWAS Task Notification - ${taskName} [${taskId}]`,
         html: `
-            <h2>任务处理完成</h2>
-            <p><strong>任务ID:</strong> ${taskId}</p>
-            <p><strong>任务名称:</strong> ${taskName}</p>
-            <p><strong>状态:</strong> <span style="color: ${status === 'success' ? 'green' : 'red'};">${status === 'success' ? '✅ 成功' : '❌ 失败'}</span></p>
-            <p><strong>详情:</strong> ${message}</p>
-            ${downloadUrl ? `<p><a href="${downloadUrl}" style="background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">📥 下载结果</a></p>` : ''}
+            <h2>Task Processing Complete</h2>
+            <p><strong>Task ID:</strong> ${taskId}</p>
+            <p><strong>Task Name:</strong> ${taskName}</p>
+            <p><strong>Status:</strong> <span style="color: ${statusColor};">${statusText}</span></p>
+            <p><strong>Details:</strong> ${message}</p>
+            ${downloadUrl ? `<p><a href="${downloadUrl}" style="background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">📥 Download Results</a></p>` : ''}
             <hr>
-            <p style="color: #999; font-size: 12px;">这是一封自动生成的邮件，请勿直接回复。</p>
+            <p style="color: #999; font-size: 12px;">This is an auto-generated email. Do not reply directly.</p>
         `
     };
 
     try {
         await transporter.sendMail(mailOptions);
-        console.log(`[邮件] 邮件已发送至: ${email}`);
-        return { success: true, message: '邮件已发送' };
+        console.log(`[Email] Sent to: ${email}`);
+        return { success: true, message: 'Email sent' };
     } catch (error) {
-        console.error(`[邮件] 发送失败: ${error.message}`);
-        return { success: false, message: `邮件发送失败: ${error.message}` };
+        console.error(`[Email] Failed to send: ${error.message}`);
+        return { success: false, message: `Failed to send email: ${error.message}` };
     }
 }
 
@@ -304,7 +307,7 @@ async function processTask(taskId) {
         return;
     }
 
-    // 初始化日志
+    // Initialize task logs
     if (!taskLogs[taskId]) {
         taskLogs[taskId] = [];
     }
@@ -314,21 +317,27 @@ async function processTask(taskId) {
     task.progress = 35;
     task.queuePosition = 0;
     task.startedAt = new Date();
-    task.message = '任务开始执行，正在准备数据...';
-    taskLogs[taskId].push(`[${new Date().toLocaleTimeString()}] ✅ 任务开始执行`);
-    taskLogs[taskId].push(`[${new Date().toLocaleTimeString()}] 任务ID: ${taskId}`);
+    task.message = 'Task started. Preparing data...';
+    taskLogs[taskId].push(`[${new Date().toLocaleTimeString()}] ✅ Task started`);
+    taskLogs[taskId].push(`[${new Date().toLocaleTimeString()}] Task ID: ${taskId}`);
+
+    const containerName = process.env.DOCKER_CONTAINER || 'gwas-worker';
 
     try {
+        // Start container
+        taskLogs[taskId].push(`[${new Date().toLocaleTimeString()}] 🚀 Starting Docker container: ${containerName}`);
+        await runCommand('docker', ['start', containerName]);
+        console.log(`[Task ${taskId}] Docker container started: ${containerName}`);
+        taskLogs[taskId].push(`[${new Date().toLocaleTimeString()}] ✅ Docker container started`);
+
         await sleep(Math.max(500, Math.floor(PROCESSING_DELAY_MS / 2)));
         task.progress = 60;
-        task.message = '正在将输入文件复制到共享数据卷...';
-
-        const containerName = process.env.DOCKER_CONTAINER || 'gwas-worker';
+        task.message = 'Copying input file to shared data volume...';
         const copyResult = await executeCopyCommand(task.filePath, task.targetPath, containerName);
 
         task.stage = 'gwas';
         task.progress = 80;
-        task.message = '正在执行 GWAS 分析脚本...';
+        task.message = 'Running GWAS analysis script...';
         const runnerResult = await executeRunnerTask(containerName, copyResult.remoteFilePath, task.id);
 
         await sleep(Math.max(500, Math.floor(PROCESSING_DELAY_MS / 2)));
@@ -337,41 +346,51 @@ async function processTask(taskId) {
         task.progress = 100;
         task.processedRows = task.rowCount;
         task.completedAt = new Date();
-        task.message = `✅ 已完成：GWAS 分析成功。结果位于 ${runnerResult.outputPath || runnerResult.outputDir}`;
+        task.message = `✅ Completed: GWAS analysis succeeded. Results at ${runnerResult.outputPath || runnerResult.outputDir}`;
 
         await sendNotificationEmail(
             task.email,
             task.id,
             task.taskName,
             'success',
-            `GWAS 分析执行成功。处理 ${task.rowCount} 行数据。结果位于 ${runnerResult.outputPath}。`,
+            `GWAS analysis completed successfully. Processed ${task.rowCount} rows. Results at ${runnerResult.outputPath}.`,
             `${BASE_URL}/api/download/${task.id}`
         );
 
-        console.log(`[任务 ${task.id}] ✅ 完成`);
+        console.log(`[Task ${task.id}] ✅ Completed`);
     } catch (error) {
         task.status = 'failed';
         task.stage = 'failed';
         task.progress = 100;
         task.completedAt = new Date();
-        task.message = `❌ 任务失败: ${error.message || '未知错误'}`;
+        task.message = `❌ Task failed: ${error.message || 'Unknown error'}`;
 
         await sendNotificationEmail(
             task.email,
             task.id,
             task.taskName,
             'failed',
-            `任务处理失败：${error.message || '未知错误'}`
+            `Task processing failed: ${error.message || 'Unknown error'}`
         );
 
-        console.error(`[任务 ${task.id}] ❌ 失败:`, error);
+        console.error(`[Task ${task.id}] ❌ Failed:`, error);
     } finally {
+        // Stop container
+        try {
+            taskLogs[taskId].push(`[${new Date().toLocaleTimeString()}] ⛔ Stopping Docker container: ${containerName}`);
+            await runCommand('docker', ['stop', containerName]);
+            console.log(`[Task ${taskId}] Docker container stopped: ${containerName}`);
+            taskLogs[taskId].push(`[${new Date().toLocaleTimeString()}] ✅ Docker container stopped`);
+        } catch (err) {
+            console.error(`[Task ${taskId}] Failed to stop container:`, err);
+        }
+
         if (task.filePath && fs.existsSync(task.filePath)) {
             try {
                 fs.unlinkSync(task.filePath);
-                console.log(`[任务 ${task.id}] 临时文件已清理`);
+                console.log(`[Task ${task.id}] Temporary file cleaned up`);
             } catch (e) {
-                console.error(`[任务 ${task.id}] 清理文件失败: ${e.message}`);
+                console.error(`[Task ${task.id}] Failed to clean up file: ${e.message}`);
             }
         }
     }
@@ -391,7 +410,7 @@ function tryStartQueuedTasks() {
 
         processTask(nextTaskId)
             .catch((error) => {
-                console.error(`[任务 ${nextTaskId}] 处理异常:`, error);
+                console.error(`[Task ${nextTaskId}] Processing exception:`, error);
             })
             .finally(() => {
                 activeTaskCount = Math.max(0, activeTaskCount - 1);
@@ -402,18 +421,18 @@ function tryStartQueuedTasks() {
 }
 
 /**
- * API 路由: 上传和处理
+ * API route: upload and process
  */
 app.post('/api/upload', async (req, res) => {
     try {
         const { email, targetPath, taskName, tableData, rowCount } = req.body;
         const taskId = uuidv4();
 
-        // 验证输入
+        // Validate input
         if (!email || !targetPath || !tableData) {
             return res.status(400).json({
                 success: false,
-                message: '缺少必需的字段'
+                message: 'Missing required fields'
             });
         }
 
@@ -433,12 +452,12 @@ app.post('/api/upload', async (req, res) => {
             });
         }
 
-        // 保存任务信息
+        // Save task metadata
         tasks[taskId] = {
             id: taskId,
             email,
             targetPath: targetPathValidation.value,
-            taskName: taskName || '未命名任务',
+            taskName: taskName || 'Untitled Task',
             status: 'queued',
             stage: 'queue',
             queuePosition: taskQueue.length + 1,
@@ -446,23 +465,23 @@ app.post('/api/upload', async (req, res) => {
             rowCount: tableValidation.rowCount || rowCount || 0,
             processedRows: 0,
             progress: 0,
-            message: `任务已接收，前方还有 ${taskQueue.length} 个任务`
+            message: `Task received. ${taskQueue.length} task(s) ahead in queue`
         };
 
-        // 生成临时文件
+        // Generate temporary input file
         const fileName = `table_${taskId}.csv`;
         const filePath = path.join(uploadsDir, fileName);
         
         fs.writeFileSync(filePath, tableData);
         tasks[taskId].filePath = filePath;
-        console.log(`[任务 ${taskId}] 文件已保存: ${filePath}`);
+        console.log(`[Task ${taskId}] File saved: ${filePath}`);
 
-        // 加入队列后触发调度
+        // Enqueue then trigger scheduler
         taskQueue.push(taskId);
         updateQueuedPositions();
         tryStartQueuedTasks();
 
-        // 立即返回响应
+        // Return response immediately
         res.json({
             success: true,
             taskId,
@@ -470,20 +489,20 @@ app.post('/api/upload', async (req, res) => {
             queuePosition: tasks[taskId].queuePosition,
             activeTaskCount,
             queuedTaskCount: taskQueue.length,
-            message: '任务已接收，进入队列处理中...'
+            message: 'Task received and queued for processing...'
         });
 
     } catch (error) {
-        console.error(`[API] 错误: ${error.message}`);
+        console.error(`[API] Error: ${error.message}`);
         res.status(500).json({
             success: false,
-            message: `服务器错误: ${error.message}`
+            message: `Server error: ${error.message}`
         });
     }
 });
 
 /**
- * API 路由: 查询任务状态
+ * API route: query task status
  */
 app.get('/api/status/:taskId', (req, res) => {
     const { taskId } = req.params;
@@ -492,7 +511,7 @@ app.get('/api/status/:taskId', (req, res) => {
     if (!task) {
         return res.status(404).json({
             success: false,
-            message: '任务不存在'
+            message: 'Task not found'
         });
     }
 
@@ -516,7 +535,7 @@ app.get('/api/status/:taskId', (req, res) => {
 });
 
 /**
- * API 路由: 查询队列概览
+ * API route: queue overview
  */
 app.get('/api/queue', (req, res) => {
     res.json({
@@ -529,7 +548,7 @@ app.get('/api/queue', (req, res) => {
 });
 
 /**
- * API 路由: 下载结果（演示）
+ * API route: download result (demo)
  */
 app.get('/api/download/:taskId', (req, res) => {
     const { taskId } = req.params;
@@ -538,19 +557,19 @@ app.get('/api/download/:taskId', (req, res) => {
     if (!task) {
         return res.status(404).json({
             success: false,
-            message: '任务不存在'
+            message: 'Task not found'
         });
     }
 
     if (task.status !== 'completed') {
         return res.status(400).json({
             success: false,
-            message: `任务未完成，当前状态: ${task.status}`
+            message: `Task is not completed. Current status: ${task.status}`
         });
     }
 
-    // 生成结果文件（演示：简单的文本文件）
-    const resultContent = `GWAS 处理结果\n=================================\n任务ID: ${taskId}\n任务名称: ${task.taskName}\n处理行数: ${task.processedRows}\n状态: ${task.status}\n完成时间: ${new Date().toLocaleString()}\n\n详情:\n${task.message}`;
+    // Generate result file (demo: simple text file)
+    const resultContent = `GWAS Processing Result\n=================================\nTask ID: ${taskId}\nTask Name: ${task.taskName}\nProcessed Rows: ${task.processedRows}\nStatus: ${task.status}\nCompleted At: ${new Date().toLocaleString()}\n\nDetails:\n${task.message}`;
     
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="result_${taskId}.txt"`);
@@ -558,7 +577,7 @@ app.get('/api/download/:taskId', (req, res) => {
 });
 
 /**
- * API 路由: 查看任务日志
+ * API route: view task logs
  */
 app.get('/api/logs/:taskId', (req, res) => {
     const { taskId } = req.params;
@@ -567,7 +586,7 @@ app.get('/api/logs/:taskId', (req, res) => {
     if (!task) {
         return res.status(404).json({
             success: false,
-            message: '任务不存在'
+            message: 'Task not found'
         });
     }
 
@@ -586,33 +605,33 @@ app.get('/api/logs/:taskId', (req, res) => {
 });
 
 /**
- * 健康检查
+ * Health check
  */
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date() });
 });
 
 /**
- * 启动服务器
+ * Start server
  */
 app.listen(PORT, () => {
     console.log(`\n========================================`);
-    console.log(`🚀 GWAS Web 服务已启动`);
-    console.log(`📍 访问地址: http://localhost:${PORT}`);
-    console.log(`📧 邮件服务: ${process.env.SMTP_HOST || '未配置'}`);
-    console.log(`🐳 Docker 容器: ${process.env.DOCKER_CONTAINER || '未指定'}`);
-    console.log(`🧬 Runner 镜像: ${GWAS_RUNNER_IMAGE}`);
-    console.log(`⏱️  最大并发任务: ${MAX_CONCURRENT_TASKS}`);
-    console.log(`🧪 演示延迟(替代GWAS): ${PROCESSING_DELAY_MS}ms`);
+    console.log(`🚀 GWAS Web service started`);
+    console.log(`📍 URL: http://localhost:${PORT}`);
+    console.log(`📧 Email service: ${process.env.SMTP_HOST || 'not configured'}`);
+    console.log(`🐳 Docker container: ${process.env.DOCKER_CONTAINER || 'not specified'}`);
+    console.log(`🧬 Runner image: ${GWAS_RUNNER_IMAGE}`);
+    console.log(`⏱️  Max concurrent tasks: ${MAX_CONCURRENT_TASKS}`);
+    console.log(`🧪 Demo delay (instead of real GWAS): ${PROCESSING_DELAY_MS}ms`);
     console.log(`========================================\n`);
 });
 
-// 错误处理
+// Error handling
 process.on('unhandledRejection', (reason, promise) => {
-    console.error('未处理的Promise拒绝:', reason);
+    console.error('Unhandled Promise rejection:', reason);
 });
 
 process.on('uncaughtException', (error) => {
-    console.error('未捕获的异常:', error);
+    console.error('Uncaught exception:', error);
     process.exit(1);
 });
