@@ -5,6 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GWAS Data Upload System</title>
     <style>
+        :root {
+            --bg: #eceff1;
+            --surface: #ffffff;
+            --line: #cfd8dc;
+            --line-strong: #8da5af;
+            --text: #243238;
+            --muted: #5f7a87;
+            --nav: #2f6a81;
+            --nav-dark: #1e4a5b;
+            --action: #2a6f89;
+            --action-dark: #21586d;
+            --ok-bg: #edf8ee;
+            --ok-text: #1d6b22;
+            --err-bg: #fbeff0;
+            --err-text: #9c1e26;
+            --info-bg: #edf5fb;
+            --info-text: #225978;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -12,101 +31,213 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: "Trebuchet MS", "Lucida Sans Unicode", "Lucida Grande", "Segoe UI", sans-serif;
+            background: linear-gradient(180deg, #d8e2e7 0, #e9eef1 160px, #eceff1 100%);
+            color: var(--text);
             min-height: 100vh;
+        }
+
+        .topbar {
+            background: linear-gradient(90deg, var(--nav-dark) 0, var(--nav) 60%, #4f8595 100%);
+            border-bottom: 2px solid #183a49;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+        }
+
+        .topbar-inner {
+            width: min(1260px, 96%);
+            margin: 0 auto;
+            min-height: 62px;
             display: flex;
             align-items: center;
-            justify-content: center;
-            padding: 20px;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 8px 0;
         }
 
-        .container {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            padding: 40px;
-            max-width: 600px;
-            width: 100%;
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #eef7fb;
         }
 
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            text-align: center;
+        .brand-mark {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.86);
+            display: grid;
+            place-items: center;
+            font-size: 18px;
+            font-weight: 700;
         }
 
-        .subtitle {
-            color: #666;
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 14px;
+        .brand h1 {
+            font-size: 24px;
+            line-height: 1.06;
+            letter-spacing: 0.2px;
         }
 
-        .form-group {
-            margin-bottom: 25px;
-        }
-
-        label {
+        .brand small {
             display: block;
-            color: #333;
-            font-weight: 600;
-            margin-bottom: 8px;
+            color: #d7e6ee;
+            font-size: 13px;
+            letter-spacing: 0.5px;
         }
 
-        input[type="text"],
-        input[type="email"],
-        textarea,
-        select {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
-            font-family: inherit;
-            transition: border-color 0.3s;
+        .menu {
+            list-style: none;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
         }
 
-        input[type="text"]:focus,
-        input[type="email"]:focus,
-        textarea:focus,
-        select:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 150px;
-            font-family: 'Courier New', monospace;
+        .menu a {
+            text-decoration: none;
+            display: block;
+            color: #eaf3f8;
+            border: 1px solid rgba(211, 231, 239, 0.35);
+            background: rgba(18, 51, 65, 0.48);
+            border-radius: 4px;
+            padding: 7px 12px;
             font-size: 13px;
         }
 
-        .table-input-hint {
-            color: #999;
+        .menu a:hover {
+            background: rgba(18, 51, 65, 0.78);
+        }
+
+        .page {
+            width: min(1260px, 96%);
+            margin: 16px auto 30px;
+        }
+
+        .top-note-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .note-text {
+            color: #1f5f87;
+            font-size: 18px;
+            font-style: italic;
+            font-weight: 700;
+        }
+
+        .example-row {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .example-row span {
+            font-size: 13px;
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        .example-btn {
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            padding: 5px 10px;
+            background: #f5f7f8;
+            color: #415963;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .example-btn:hover {
+            background: #e8eef2;
+        }
+
+        .portal-panel {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 14px;
+        }
+
+        .query-area {
+            width: 100%;
+            min-height: 180px;
+            border: 1px solid var(--line);
+            border-radius: 3px;
+            resize: vertical;
+            font-family: "Consolas", "Courier New", monospace;
+            font-size: 13px;
+            color: #334953;
+            background: #fcfeff;
+            padding: 10px;
+        }
+
+        .query-area:focus,
+        input:focus,
+        select:focus,
+        button:focus {
+            outline: 2px solid rgba(42, 111, 137, 0.26);
+            outline-offset: 1px;
+        }
+
+        .control-grid {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 10px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .field label {
             font-size: 12px;
-            margin-top: 5px;
+            font-weight: 700;
+            color: var(--muted);
+        }
+
+        input,
+        select {
+            min-height: 35px;
+            border: 1px solid var(--line);
+            border-radius: 3px;
+            padding: 7px 9px;
+            font-size: 13px;
+            color: #304753;
+            background: #fff;
         }
 
         .upload-area {
-            border: 2px dashed #667eea;
-            border-radius: 5px;
-            padding: 30px;
+            margin-top: 8px;
+            border: 1px dashed var(--line-strong);
+            border-radius: 3px;
+            padding: 12px;
             text-align: center;
+            background: #f8fbfd;
             cursor: pointer;
-            transition: all 0.3s;
-            background: #f9f9f9;
         }
 
-        .upload-area:hover {
-            border-color: #764ba2;
-            background: #f4f4ff;
+        .upload-row {
+            margin-top: 10px;
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        .upload-row .field {
+            width: min(420px, 100%);
         }
 
         .upload-area.dragover {
-            border-color: #764ba2;
-            background: #f0f0ff;
+            background: #eef5f9;
+            border-color: var(--action);
         }
 
         .upload-area input[type="file"] {
@@ -114,102 +245,61 @@
         }
 
         .upload-text {
-            color: #333;
-            font-weight: 600;
-            margin-bottom: 10px;
+            font-weight: 700;
+            color: #365260;
+            font-size: 13px;
+            margin-bottom: 4px;
         }
 
-        .upload-hint {
-            color: #999;
+        .upload-hint,
+        .file-name,
+        .table-input-hint {
             font-size: 12px;
-        }
-
-        .file-name {
-            margin-top: 10px;
-            color: #667eea;
-            font-size: 14px;
-            font-weight: 500;
+            color: #607d8b;
+            margin-top: 4px;
         }
 
         .button-group {
             display: flex;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-top: 12px;
         }
 
         button {
-            flex: 1;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            font-weight: 600;
+            border: 1px solid #2a5d71;
+            border-radius: 3px;
+            padding: 9px 14px;
             cursor: pointer;
-            transition: all 0.3s;
+            min-height: 36px;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-primary:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
+            color: #ecf7fc;
+            background: linear-gradient(180deg, var(--action) 0, var(--action-dark) 100%);
         }
 
         .btn-secondary {
-            background: #f0f0f0;
-            color: #333;
+            color: #415863;
+            border-color: #b7c7cf;
+            background: linear-gradient(180deg, #f9fbfc 0, #e8eef2 100%);
         }
 
-        .btn-secondary:hover {
-            background: #e0e0e0;
-        }
-
-        .message {
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .message.show {
-            display: block;
-        }
-
-        .message.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .message.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .message.info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
+        button:disabled {
+            opacity: 0.62;
+            cursor: not-allowed;
         }
 
         .progress-bar {
             width: 100%;
             height: 6px;
-            background: #e0e0e0;
-            border-radius: 3px;
+            background: #dee7eb;
+            border-radius: 2px;
             overflow: hidden;
-            margin-top: 15px;
             display: none;
+            margin-top: 10px;
         }
 
         .progress-bar.show {
@@ -218,42 +308,48 @@
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            width: 0%;
+            width: 0;
+            background: linear-gradient(90deg, #4e8595 0, #2a667f 100%);
             transition: width 0.3s;
         }
 
-        .help-section {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
-        }
-
-        .help-title {
-            color: #333;
-            font-weight: 600;
-            margin-bottom: 10px;
-            font-size: 14px;
-        }
-
-        .help-text {
-            color: #666;
-            font-size: 12px;
-            line-height: 1.6;
-        }
-
-        .help-text code {
-            background: #f5f5f5;
-            padding: 2px 6px;
+        .message {
+            margin-top: 10px;
+            padding: 10px;
             border-radius: 3px;
-            font-family: 'Courier New', monospace;
+            border: 1px solid transparent;
+            display: none;
+            font-size: 13px;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.success {
+            background: var(--ok-bg);
+            color: var(--ok-text);
+            border-color: #bfe1c1;
+        }
+
+        .message.error {
+            background: var(--err-bg);
+            color: var(--err-text);
+            border-color: #ebc2c5;
+        }
+
+        .message.info {
+            background: var(--info-bg);
+            color: var(--info-text);
+            border-color: #bfd6e5;
         }
 
         .status {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f9f9f9;
-            border-radius: 5px;
+            margin-top: 12px;
+            background: #f7fbfd;
+            border: 1px solid #cbdbe2;
+            border-radius: 3px;
+            padding: 10px;
             display: none;
         }
 
@@ -261,28 +357,41 @@
             display: block;
         }
 
+        .status-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+            gap: 8px;
+        }
+
         .status-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 14px;
+            border-right: 1px solid #d8e3e8;
+            padding-right: 8px;
+        }
+
+        .status-item:last-child {
+            border-right: none;
         }
 
         .status-label {
-            color: #666;
-            font-weight: 500;
+            display: block;
+            color: #607d8b;
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 2px;
         }
 
         .status-value {
-            color: #333;
-            font-weight: 600;
+            color: #344f5a;
+            font-size: 13px;
+            font-weight: 700;
+            word-break: break-word;
         }
 
         .logs-container {
-            margin-top: 20px;
+            margin-top: 12px;
             display: none;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            border: 1px solid var(--line);
+            border-radius: 4px;
             overflow: hidden;
         }
 
@@ -291,172 +400,349 @@
         }
 
         .logs-header {
-            background: #667eea;
-            color: white;
-            padding: 12px;
-            font-weight: 600;
+            background: linear-gradient(180deg, #4f788a 0, #395f70 100%);
+            color: #f0f7fa;
+            padding: 10px;
+            font-size: 13px;
+            font-weight: 700;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .logs-body {
-            background: #f5f5f5;
-            max-height: 300px;
+            background: #f4f7f9;
+            max-height: 280px;
             overflow-y: auto;
-            padding: 12px;
-            font-family: 'Courier New', monospace;
+            padding: 10px;
+            font-family: "Consolas", "Courier New", monospace;
             font-size: 12px;
             line-height: 1.5;
         }
 
         .log-line {
-            color: #333;
+            color: #344a54;
+            border-bottom: 1px solid #dde6ea;
             padding: 4px 0;
             word-break: break-all;
-            border-bottom: 1px solid #e0e0e0;
         }
 
         .log-line.success {
-            color: #28a745;
+            color: #2e7d32;
         }
 
         .log-line.error {
-            color: #dc3545;
+            color: #c62828;
         }
 
         .log-line.warning {
-            color: #ffc107;
+            color: #d68000;
         }
 
         .log-empty {
-            color: #999;
+            color: #849aa4;
             font-style: italic;
         }
 
         .toggle-logs-btn {
-            background: #e0e0e0;
-            border: none;
-            padding: 4px 8px;
+            border: 1px solid #adc1ca;
             border-radius: 3px;
-            cursor: pointer;
+            padding: 4px 8px;
             font-size: 12px;
+            color: #35515d;
+            background: #eef3f6;
         }
 
-        .toggle-logs-btn:hover {
-            background: #d0d0d0;
+        .task-board {
+            margin-top: 14px;
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .task-board-header {
+            background: #2b4f60;
+            color: #edf6fa;
+            padding: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .task-board-body {
+            padding: 10px;
+            background: #f7fafc;
+        }
+
+        .task-board-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .task-column {
+            border: 1px solid #d7e2e7;
+            border-radius: 4px;
+            background: #fff;
+            min-height: 120px;
+            padding: 10px;
+        }
+
+        .task-column h3 {
+            font-size: 13px;
+            color: #344f5b;
+            margin-bottom: 8px;
+        }
+
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .task-card {
+            border: 1px solid #e0e9ee;
+            border-radius: 3px;
+            padding: 8px;
+            background: #fbfdff;
+        }
+
+        .task-card-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #2f4a56;
+            margin-bottom: 4px;
+        }
+
+        .task-card-meta {
+            font-size: 11px;
+            color: #5c7682;
+            line-height: 1.45;
+        }
+
+        .task-empty {
+            color: #8a9fa9;
+            font-size: 12px;
+            font-style: italic;
+        }
+
+        .help-section {
+            margin-top: 14px;
+            border-top: 1px solid #d3dfe5;
+            padding-top: 10px;
+        }
+
+        .help-title {
+            color: #375360;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .help-text {
+            color: #607d8b;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 1080px) {
+            .control-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .status-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .topbar-inner {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .brand h1 {
+                font-size: 22px;
+            }
+
+            .example-row {
+                margin-left: 0;
+            }
+
+            .control-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .task-board-columns {
+                grid-template-columns: 1fr;
+            }
+
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>📊 GWAS Data Upload System</h1>
-        <p class="subtitle">Upload your two-column table data for GWAS analysis</p>
+    <header class="topbar">
+        <div class="topbar-inner">
+            <div class="brand">
+                <div class="brand-mark">G</div>
+                <div>
+                    <h1>GrainGenes</h1>
+                    <small>GWAS Service Portal</small>
+                </div>
+            </div>
+            <ul class="menu">
+                <li><a href="#">Legacy GWAS service</a></li>
+                <li><a href="#">Tutorials</a></li>
+                <li><a href="#">Feedback</a></li>
+                <li><a href="#">Cite Us</a></li>
+            </ul>
+        </div>
+    </header>
 
-        <div id="messageContainer"></div>
+    <main class="page">
+        <div class="top-note-row">
+            <p class="note-text">Upload phenotype table and Run kmer GWAS</p>
+            <div class="example-row">
+                <span>Choose Grain</span>
+                <select id="exampleSelect" style="border: 1px solid var(--line); border-radius: 4px; padding: 5px 10px; background: #f5f7f8; color: #415963; cursor: pointer; font-size: 13px;">
+                    <option value="">Select an example...</option>
+                    <option value="ecoli1">E. coli 1</option>
+                    <option value="ecoli2">E. coli 2</option>
+                </select>
+                <button type="button" id="togglePhenotypeBtn" style="margin-left: 8px; border: 1px solid #2a5d71; border-radius: 3px; padding: 5px 14px; cursor: pointer; font-size: 13px; font-weight: 700; color: #ecf7fc; background: linear-gradient(180deg, #2a6f89 0, #21586d 100%);" disabled>Hide example table</button>
+                <button type="button" id="downloadExampleBtn" style="margin-left: 8px; border: 1px solid #2a5d71; border-radius: 3px; padding: 5px 14px; cursor: pointer; font-size: 13px; font-weight: 700; color: #ecf7fc; background: linear-gradient(180deg, #2a6f89 0, #21586d 100%);" disabled>Download Example</button>
+            </div>
+            <div style="margin-top: 8px; padding: 8px 10px; background: #f9fafb; border-left: 3px solid #5f7a87; border-radius: 2px; font-size: 12px; color: #5f7a87; line-height: 1.5;">
+                <strong>Note:</strong> The accession_id values in your input/uploaded file must be contained within the accession_id values of the selected example.
+            </div>
+        </div>
 
         <form id="uploadForm">
-            <!-- Email Input -->
-            <div class="form-group">
-                <label for="email">📧 Email Address <span style="color: red;">*</span></label>
-                <input type="email" id="email" name="email" placeholder="e.g. user@example.com" required>
-            </div>
+            <section class="portal-panel">
+                <textarea class="query-area" id="tableData" placeholder="Paste query table data (exactly two columns, separated by comma or tab), or choose file upload mode below."></textarea>
 
-            <!-- Upload Method Selection -->
-            <div class="form-group">
-                <label>📁 Upload Method</label>
-                <select id="uploadMethod" style="margin-bottom: 15px;">
-                    <option value="file">Upload CSV/TSV File</option>
-                    <option value="manual">Enter Data Manually</option>
-                </select>
+                <div class="control-grid">
+                    <div class="field">
+                        <label for="email">Email Address *</label>
+                        <input type="email" id="email" name="email" placeholder="e.g. user@example.com" required>
+                    </div>
 
-                <!-- File Upload -->
-                <div id="fileUploadSection">
-                    <div class="upload-area" id="uploadArea">
-                        <div class="upload-text">📤 Click or drag CSV/TSV file to upload</div>
-                        <div class="upload-hint">Supports CSV/TSV/TXT format with exactly 2 columns</div>
-                        <input type="file" id="fileInput" name="file" accept=".csv,.tsv,.txt,text/tab-separated-values,text/csv">
-                        <div class="file-name" id="fileName"></div>
+                    <div class="field">
+                        <label for="uploadMethod">Upload Method</label>
+                        <select id="uploadMethod">
+                            <option value="file">Upload CSV/TSV File</option>
+                            <option value="manual">Enter Data Manually</option>
+                        </select>
+                    </div>
+
+                    <div class="field" id="taskNameField">
+                        <label for="taskName">Task Name (Optional)</label>
+                        <input type="text" id="taskName" name="taskName" placeholder="Give a name for this task">
                     </div>
                 </div>
 
-                <!-- Manual Input -->
-                <div id="manualInputSection" style="display: none;">
-                    <textarea id="tableData" placeholder="Please enter your table data, with two columns separated by tab or comma&#10;Example:&#10;Column1&#9;Column2&#10;data1&#9;data2&#10;data3&#9;data4"></textarea>
-                    <div class="table-input-hint">Each line is one record, and columns are separated by Tab or comma</div>
+                <div class="upload-row">
+                    <div class="field" id="fileUploadSection">
+                        <label>File Upload Area</label>
+                        <div class="upload-area" id="uploadArea">
+                            <div class="upload-text">Click or drag TSV/TXT file to upload</div>
+                            <div class="upload-hint">Only accepts TSV/TXT format with exactly 2 columns</div>
+                            <input type="file" id="fileInput" name="file" accept=".tsv,.txt,text/tab-separated-values">
+                            <div class="file-name" id="fileName"></div>
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Task Name -->
-            <div class="form-group">
-                <label for="taskName">🏷️ Task Name (Optional)</label>
-                <input type="text" id="taskName" name="taskName" placeholder="Give a name for this task (optional)">
-            </div>
+                <div class="table-input-hint">Each line is one record, and columns are separated by Tab or comma</div>
+            </section>
 
-            <!-- Buttons -->
-            <div class="button-group">
-                <button type="submit" class="btn-primary" id="submitBtn">🚀 Submit Task</button>
-                <button type="reset" class="btn-secondary" id="resetBtn">🔄 Reset Form</button>
-            </div>
+            <section class="portal-panel">
+                <div class="button-group">
+                    <button type="submit" class="btn-primary" id="submitBtn">Submit Task</button>
+                    <button type="reset" class="btn-secondary" id="resetBtn">Reset Form</button>
+                </div>
 
-            <div class="progress-bar" id="progressBar">
-                <div class="progress-fill" id="progressFill"></div>
-            </div>
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
 
-            <!-- Status Display -->
-            <div class="status" id="status">
-                <div class="status-item">
-                    <span class="status-label">Task ID:</span>
-                    <span class="status-value" id="taskId">-</span>
-                </div>
-                <div class="status-item">
-                    <span class="status-label">Status:</span>
-                    <span class="status-value" id="statusValue">Processing...</span>
-                </div>
-                <div class="status-item">
-                    <span class="status-label">Stage:</span>
-                    <span class="status-value" id="stageValue">Queued</span>
-                </div>
-                <div class="status-item">
-                    <span class="status-label">Queue Position:</span>
-                    <span class="status-value" id="queuePosition">-</span>
-                </div>
-                <div class="status-item">
-                    <span class="status-label">Processed Rows:</span>
-                    <span class="status-value" id="processedRows">0</span>
-                </div>
-            </div>
+                <div id="messageContainer"></div>
 
-            <!-- Logs Panel -->
-            <div class="logs-container" id="logsContainer">
-                <div class="logs-header">
-                    📋 Execution Logs
-                    <button type="button" class="toggle-logs-btn" id="toggleLogsBtn">Collapse</button>
+                <div class="status" id="status">
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <span class="status-label">Task ID</span>
+                            <span class="status-value" id="taskId">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Status</span>
+                            <span class="status-value" id="statusValue">Processing...</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Stage</span>
+                            <span class="status-value" id="stageValue">Queued</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Queue Position</span>
+                            <span class="status-value" id="queuePosition">-</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Processed Rows</span>
+                            <span class="status-value" id="processedRows">0</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="logs-body" id="logBody"></div>
-            </div>
+
+                <div class="logs-container" id="logsContainer">
+                    <div class="logs-header">
+                        <span>Execution Logs</span>
+                        <button type="button" class="toggle-logs-btn" id="toggleLogsBtn">Collapse</button>
+                    </div>
+                    <div class="logs-body" id="logBody"></div>
+                </div>
+
+                <div class="task-board" id="taskBoard">
+                    <div class="task-board-header">
+                        <span>Task Monitor</span>
+                        <span id="taskBoardSummary">Running: 0 | Queued: 0</span>
+                    </div>
+                    <div class="task-board-body">
+                        <div class="task-board-columns">
+                            <div class="task-column">
+                                <h3>Running Tasks</h3>
+                                <div class="task-list" id="runningTaskList"></div>
+                            </div>
+                            <div class="task-column">
+                                <h3>Queued Tasks</h3>
+                                <div class="task-list" id="queuedTaskList"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="help-section">
+                    <div class="help-title">Instructions</div>
+                    <div class="help-text">
+                        <p>1. Enter your email address to receive notifications.</p>
+                        <p>2. Choose upload method (CSV file or manual input).</p>
+                        <p>3. Click Submit Task to process data and receive email notification.</p>
+                        <p>Default upload path: /data/input/</p>
+                    </div>
+                </div>
+            </section>
         </form>
-
-        <!-- Help Section -->
-        <div class="help-section">
-            <div class="help-title">💡 Instructions</div>
-            <div class="help-text">
-                <p>1. Enter your email address to receive notifications</p>
-                <p>2. Choose upload method (CSV file or manual input)</p>
-                <p>3. Click Submit to process data and receive email notification</p>
-                <p>Default upload path: /data/input/</p>
-                <p style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd;">
-                    <strong>CSV Format:</strong> File must contain exactly 2 columns
-                </p>
-            </div>
-        </div>
-    </div>
+    </main>
 
     <script>
         const form = document.getElementById('uploadForm');
         const uploadMethod = document.getElementById('uploadMethod');
         const fileUploadSection = document.getElementById('fileUploadSection');
-        const manualInputSection = document.getElementById('manualInputSection');
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
         const fileName = document.getElementById('fileName');
@@ -465,16 +751,360 @@
         const progressBar = document.getElementById('progressBar');
         const progressFill = document.getElementById('progressFill');
         const status = document.getElementById('status');
+        const tableDataInput = document.getElementById('tableData');
+
         let currentPolling = null;
+        let queuePolling = null;
+        let logsExpanded = true;
+
+        // Example buttons fill demo table
+        const exampleData = {
+            ecoli: `accession_id\tphenotype_value
+ERR9353534\t23.52078771
+ERR9353535\t23.61236448
+ERR9353536\t23.53638264
+ERR9353537\t23.64170042
+ERR9353538\t23.67732049
+ERR9353539\t23.63448626
+ERR9353540\t23.64164354
+ERR9353541\t23.61992061
+ERR9353542\t23.15780934
+ERR9353543\t23.11653497
+ERR9353544\t23.0306966
+ERR9353545\t22.60741475
+ERR9353546\t23.01979431
+ERR9353547\t23.09596179
+ERR9353548\t22.89162371
+ERR9353549\t23.03065266
+ERR9353550\t22.81696566
+ERR9353551\t23.12705539
+ERR9353552\t23.46358075
+ERR9353553\t23.48808468
+ERR9353554\t23.48015118
+ERR9353555\t23.48836643
+ERR9353556\t22.70517105
+ERR9353557\t23.48827203
+ERR9353559\t23.43894651
+ERR9353560\t23.40519991
+ERR9353561\t23.49631633
+ERR9353562\t23.63448637
+ERR9353563\t23.65616133
+ERR9353564\t23.66329598
+ERR9353565\t23.67039476
+ERR9353566\t23.55969135
+ERR9353567\t23.08195765
+ERR9353569\t23.60494498
+ERR9353571\t23.0853778
+ERR9353572\t22.93983923
+ERR9353573\t22.9864509
+ERR9353574\t23.00845752
+ERR9353575\t22.97453398
+ERR9353576\t23.14771018
+ERR9353577\t23.14767044
+ERR9353580\t23.14711252
+ERR9353582\t23.37913243
+ERR9353583\t23.40490117
+ERR9353584\t23.25235764
+ERR9353585\t23.51999874
+ERR9353586\t23.48018386
+ERR9353587\t22.64860664
+ERR9353588\t23.43047756
+ERR9353589\t23.39642918
+ERR9353590\t23.67042286
+ERR9353591\t23.61242298
+ERR9353592\t23.52088024
+ERR9353593\t23.64873664
+ERR9353594\t23.62709209
+ERR9353596\t23.67042297
+ERR9353597\t23.61233658
+ERR9353598\t23.62715022
+ERR9353600\t22.98645107
+ERR9353601\t22.98587129
+ERR9353602\t23.0742122
+ERR9353603\t22.96297082
+ERR9353604\t22.87975804
+ERR9353605\t22.93947161
+ERR9353606\t23.06371945
+ERR9353607\t22.92785462
+ERR9353609\t23.40476764
+ERR9353610\t22.7724942
+ERR9353611\t23.31676696
+ERR9353612\t23.41345491
+ERR9353613\t23.48018287
+ERR9353614\t23.41352128
+ERR9353615\t23.57441013
+ERR9353616\t23.51224001
+ERR9353617\t23.42195861
+ERR9353618\t23.50434645
+ERR9353619\t23.6561048
+ERR9353622\t23.61236516
+ERR9353623\t23.55181233
+ERR9353624\t23.61233591
+ERR9353625\t23.59742712
+ERR9353626\t23.64913259
+ERR9353627\t23.58995808
+ERR9353628\t22.96297082
+ERR9353629\t23.21684812
+ERR9353630\t22.93956272
+ERR9353631\t23.05272442
+ERR9353632\t22.6819281
+ERR9353633\t22.84238181
+ERR9353634\t22.8542161
+ERR9353635\t22.97408456
+ERR9353636\t22.81646398
+ERR9353637\t22.96265458
+ERR9353638\t23.54332853
+ERR9353639\t23.09203865
+ERR9353641\t23.40513328
+ERR9353642\t23.46374063
+ERR9353643\t23.52783753
+ERR9353644\t23.54356997
+ERR9353645\t23.49619208
+ERR9353646\t23.48795899
+ERR9353648\t23.69148561
+ERR9353649\t23.67734781
+ERR9353651\t23.62712149
+ERR9353652\t23.63425736
+ERR9353654\t23.69156814
+ERR9353655\t23.66335158
+ERR9353657\t22.54649816
+ERR9353658\t23.1474714
+ERR9353659\t23.14723226
+ERR9353660\t23.0525115
+ERR9353661\t23.14771018
+ERR9353662\t23.1877275
+ERR9353663\t23.12693412
+ERR9353664\t22.98645107
+ERR9353665\t23.03086899
+ERR9353666\t23.04198761
+ERR9353667\t23.47990013
+ERR9353669\t23.41371805
+ERR9353670\t23.48021431
+ERR9353671\t23.42199044
+ERR9353673\t23.45573646
+ERR9353675\t23.43050934
+ERR9353676\t23.47179477
+ERR9353677\t23.59004685
+ERR9353679\t23.5672575
+ERR9353680\t23.50473863
+ERR9353681\t23.54379956
+ERR9353682\t23.61236448
+ERR9353683\t23.57460658
+ERR9353684\t23.58218449
+ERR9353685\t23.60497337
+ERR9353686\t22.93956325
+ERR9353687\t22.97426438
+ERR9353688\t23.019446
+ERR9353689\t23.01940205
+ERR9353690\t22.9861389
+ERR9353691\t22.96333392
+ERR9353692\t23.03121456
+ERR9353693\t23.14763038
+ERR9353694\t23.0197066
+ERR9353695\t22.93974742
+ERR9353696\t23.43060747
+ERR9353697\t23.47154189
+ERR9353698\t23.28957527
+ERR9353699\t23.34390448
+ERR9353700\t23.28921656
+ERR9353701\t23.37906512
+ERR9353702\t23.33496187
+ERR9353703\t23.43034612
+ERR9353704\t23.46386782
+ERR9353705\t23.41352115
+ERR9353707\t23.5900472
+ERR9353708\t23.48067866
+ERR9353709\t23.56704879
+ERR9353710\t23.53632252
+ERR9353711\t23.64164277
+ERR9353712\t23.60494397
+ERR9353713\t23.51300382
+ERR9353714\t23.48892278
+ERR9353715\t22.05505897
+ERR9353716\t23.07412741
+ERR9353717\t22.82950635
+ERR9353718\t22.92794773
+ERR9353719\t22.86702021
+ERR9353720\t22.98596055
+ERR9353721\t23.05225609
+ERR9353722\t22.80401105
+ERR9353723\t22.27411279
+ERR9353724\t22.4834645
+ERR9353725\t23.32592781
+ERR9353726\t22.52762901
+ERR9353727\t22.84991816
+ERR9353728\t23.26197194
+ERR9353730\t22.44743086
+ERR9353731\t23.32631358
+ERR9353732\t23.23263479
+ERR9353733\t23.37047364
+ERR9353734\t22.57484595
+ERR9353737\t23.36261006
+ERR9353740\t23.58989969
+ERR9353741\t23.59748543
+ERR9353742\t22.94765317
+ERR9353743\t22.92729819
+ERR9353745\t22.82945584
+ERR9353746\t23.0527667
+ERR9353747\t23.07429584
+ERR9353749\t23.06371846
+ERR9353750\t22.9039131
+ERR9353751\t23.00863293
+ERR9353752\t22.87961428
+ERR9353753\t23.31697917
+ERR9353754\t23.38787442
+ERR9353755\t23.39629577
+ERR9353756\t23.37043958
+ERR9353757\t23.31697876
+ERR9353758\t23.37896448
+ERR9353759\t23.42189327
+ERR9353760\t23.41335547
+ERR9353761\t23.38787416
+ERR9353762\t23.35279295
+ERR9353763\t23.43925844
+ERR9353764\t23.58242054
+ERR9353766\t23.60488652
+ERR9353770\t23.53629038
+ERR9353771\t23.61971882
+ERR9353772\t22.90405427
+ERR9353773\t22.84213566
+ERR9353774\t23.03095518
+ERR9353775\t22.81701564
+ERR9353776\t23.05268164
+ERR9353777\t22.93924094
+ERR9353778\t22.89171938
+ERR9353779\t22.73780806
+ERR9353780\t22.97448881
+ERR9353781\t22.84233212
+ERR9353782\t23.36148964
+ERR9353783\t23.43878411
+ERR9353784\t23.27101371
+ERR9353785\t23.38770604
+ERR9353786\t23.38760534
+ERR9353787\t23.45551273
+ERR9353788\t23.42215577
+ERR9353789\t23.48018312
+ERR9353791\t23.62709287
+ERR9353792\t23.5439515
+ERR9353793\t23.58224342
+ERR9353794\t23.58995785
+ERR9353795\t23.6197186
+ERR9353796\t23.5974561
+ERR9353797\t23.58239033
+ERR9353798\t23.59736778
+ERR9353799\t23.56740641
+ERR9353800\t22.95090505
+ERR9353801\t22.99672259
+ERR9353802\t23.16803425
+ERR9353803\t22.98600484
+ERR9353804\t22.8919092
+ERR9353805\t22.98649604
+ERR9353806\t23.03086866
+ERR9353807\t22.9861389
+ERR9353808\t22.9968105
+ERR9353809\t22.98613872
+ERR9353810\t23.43871902
+ERR9353812\t23.38784038
+ERR9353813\t23.52771538
+ERR9353814\t23.47192224
+ERR9353815\t23.46361268
+ERR9353817\t23.37916601
+ERR9353818\t23.45560867
+ERR9353819\t23.51220914
+ERR9353820\t23.60500265
+ERR9353821\t23.55202396
+ERR9353822\t23.53644501
+ERR9353823\t23.51287944
+ERR9353824\t23.48061494
+ERR9353825\t23.52075594
+ERR9353826\t23.48077369
+ERR9353827\t23.50492722
+ERR9353828\t23.61971893
+ERR9353830\t22.41649346
+ERR9353831\t22.866729
+ERR9353832\t23.01975037
+ERR9353833\t23.06363454
+ERR9353834\t23.08483644
+ERR9353835\t22.86740657
+ERR9353836\t22.82965461
+ERR9353837\t22.8792783
+ERR9353838\t22.25564554
+ERR9353839\t23.46364473
+ERR9353840\t23.34397413
+ERR9353841\t23.41368564
+ERR9353842\t23.37043985
+ERR9353843\t23.46361305
+ERR9353844\t23.44701106
+ERR9353845\t22.97341728
+ERR9353846\t22.05089619`
+        };
+
+    exampleData.ecoli1 = exampleData.ecoli;
+    exampleData.ecoli2 = exampleData.ecoli;
+
+        const exampleSelect = document.getElementById('exampleSelect');
+        const togglePhenotypeBtn = document.getElementById('togglePhenotypeBtn');
+        const downloadExampleBtn = document.getElementById('downloadExampleBtn');
+        let phenotypeTableVisible = false;
+
+        function refreshPhenotypeTable() {
+            const selectedValue = exampleSelect.value;
+            if (phenotypeTableVisible && selectedValue && exampleData[selectedValue]) {
+                tableDataInput.value = exampleData[selectedValue];
+            } else if (!phenotypeTableVisible) {
+                tableDataInput.value = '';
+            }
+        }
+        
+        exampleSelect.addEventListener('change', (e) => {
+            const selectedValue = e.target.value;
+            if (selectedValue && exampleData[selectedValue]) {
+                downloadExampleBtn.disabled = false;
+                togglePhenotypeBtn.disabled = false;
+                phenotypeTableVisible = false;
+                togglePhenotypeBtn.textContent = 'Show example table';
+                tableDataInput.value = '';
+                refreshPhenotypeTable();
+            } else {
+                downloadExampleBtn.disabled = true;
+                togglePhenotypeBtn.disabled = true;
+                phenotypeTableVisible = false;
+                togglePhenotypeBtn.textContent = 'Hide example table';
+                tableDataInput.value = '';
+            }
+        });
+
+        togglePhenotypeBtn.addEventListener('click', () => {
+            const selectedValue = exampleSelect.value;
+            if (!selectedValue || !exampleData[selectedValue]) {
+                return;
+            }
+
+            phenotypeTableVisible = !phenotypeTableVisible;
+            togglePhenotypeBtn.textContent = phenotypeTableVisible ? 'Hide example table' : 'Show example table';
+            refreshPhenotypeTable();
+        });
+
+        downloadExampleBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const selectedValue = exampleSelect.value;
+            if (selectedValue && exampleData[selectedValue]) {
+                const downloadUrl = `/api/examples/${selectedValue}/download`;
+                const url = downloadUrl;
+                const link = document.createElement('a');
+                link.href = url;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        });
 
         // Switch upload method
         uploadMethod.addEventListener('change', (e) => {
             if (e.target.value === 'file') {
                 fileUploadSection.style.display = 'block';
-                manualInputSection.style.display = 'none';
             } else {
-                fileUploadSection.style.display = 'none';
-                manualInputSection.style.display = 'block';
+                fileUploadSection.style.display = 'block';
             }
         });
 
@@ -505,13 +1135,13 @@
         });
 
         function displayFileName(name) {
-            fileName.textContent = `✅ Selected: ${name}`;
+            fileName.textContent = 'Selected: ' + name;
         }
 
         // Show message
         function showMessage(message, type = 'info') {
             const msgDiv = document.createElement('div');
-            msgDiv.className = `message ${type} show`;
+            msgDiv.className = 'message ' + type + ' show';
             msgDiv.textContent = message;
             messageContainer.innerHTML = '';
             messageContainer.appendChild(msgDiv);
@@ -520,93 +1150,6 @@
                 setTimeout(() => msgDiv.remove(), 5000);
             }
         }
-
-        // Form submit
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            if (currentPolling) {
-                clearInterval(currentPolling);
-                currentPolling = null;
-            }
-
-            const email = document.getElementById('email').value;
-            const targetPath = '/data/input/';
-            const taskName = document.getElementById('taskName').value || 'Untitled Task';
-            const uploadMethod = document.getElementById('uploadMethod').value;
-
-            // Get table data
-            let tableData = '';
-            if (uploadMethod === 'file') {
-                if (!fileInput.files.length) {
-                    showMessage('❌ Please select a CSV file', 'error');
-                    return;
-                }
-                tableData = await readFileAsText(fileInput.files[0]);
-            } else {
-                tableData = document.getElementById('tableData').value;
-                if (!tableData.trim()) {
-                    showMessage('❌ Please enter table data', 'error');
-                    return;
-                }
-            }
-
-            // Validate table data
-            const lines = tableData.trim().split('\n');
-            if (lines.length < 1) {
-                showMessage('❌ Table data cannot be empty', 'error');
-                return;
-            }
-
-            const columnCheck = validateTwoColumns(tableData);
-            if (!columnCheck.ok) {
-                showMessage(`❌ ${columnCheck.message}`, 'error');
-                return;
-            }
-
-            submitBtn.disabled = true;
-            progressBar.classList.add('show');
-            status.classList.add('show');
-            progressFill.style.width = '5%';
-            document.getElementById('statusValue').textContent = 'Submitted';
-            document.getElementById('stageValue').textContent = 'Waiting for server response';
-            document.getElementById('queuePosition').textContent = '-';
-            document.getElementById('processedRows').textContent = '0';
-
-            try {
-                const response = await fetch('/api/upload', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        email,
-                        targetPath,
-                        taskName,
-                        tableData,
-                        rowCount: lines.length
-                    })
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    document.getElementById('taskId').textContent = result.taskId;
-                    document.getElementById('queuePosition').textContent = String(result.queuePosition || 0);
-                    document.getElementById('stageValue').textContent = 'Queued';
-                    progressFill.style.width = '15%';
-                    
-                    showMessage(`✅ Task submitted. Current queue position: ${result.queuePosition || 0}. The system will notify ${email} by email.`, 'info');
-                    startPollingStatus(result.taskId, lines.length);
-                } else {
-                    showMessage(`❌ Submission failed: ${result.message}`, 'error');
-                }
-            } catch (error) {
-                showMessage(`❌ Network error: ${error.message}`, 'error');
-            } finally {
-                submitBtn.disabled = false;
-            }
-        });
 
         // Read file content
         function readFileAsText(file) {
@@ -621,20 +1164,20 @@
         function validateTwoColumns(tableData) {
             const lines = tableData
                 .split('\n')
-                .map(line => line.trim())
-                .filter(line => line.length > 0);
+                .map((line) => line.trim())
+                .filter((line) => line.length > 0);
 
             if (lines.length === 0) {
                 return { ok: false, message: 'Table content cannot be empty' };
             }
 
             for (let i = 0; i < lines.length; i++) {
-                const cols = lines[i].split(/\t|,/).map(col => col.trim());
+                const cols = lines[i].split(/\t|,/).map((col) => col.trim());
                 if (cols.length !== 2) {
-                    return { ok: false, message: `Line ${i + 1} does not have exactly two columns` };
+                    return { ok: false, message: 'Line ' + (i + 1) + ' does not have exactly two columns' };
                 }
                 if (!cols[0] || !cols[1]) {
-                    return { ok: false, message: `Line ${i + 1} contains empty values` };
+                    return { ok: false, message: 'Line ' + (i + 1) + ' contains empty values' };
                 }
             }
 
@@ -652,12 +1195,79 @@
             return stageMap[stage] || stage || '-';
         }
 
-        let logsExpanded = true;
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function renderTaskBoard(data) {
+            const runningTaskList = document.getElementById('runningTaskList');
+            const queuedTaskList = document.getElementById('queuedTaskList');
+            const taskBoardSummary = document.getElementById('taskBoardSummary');
+
+            const runningTasks = Array.isArray(data.runningTasks) ? data.runningTasks : [];
+            const queuedTasks = Array.isArray(data.queuedTasks) ? data.queuedTasks : [];
+
+            taskBoardSummary.textContent = 'Running: ' + runningTasks.length + ' | Queued: ' + queuedTasks.length;
+
+            if (runningTasks.length === 0) {
+                runningTaskList.innerHTML = '<div class="task-empty">No running tasks</div>';
+            } else {
+                runningTaskList.innerHTML = runningTasks.map((task) => {
+                    return '<div class="task-card">' +
+                        '<div class="task-card-title">' + escapeHtml(task.taskName || 'Untitled Task') + ' (' + escapeHtml(task.id) + ')</div>' +
+                        '<div class="task-card-meta">Stage: ' + escapeHtml(mapStage(task.stage)) + '</div>' +
+                        '<div class="task-card-meta">Progress: ' + escapeHtml(task.progress) + '%</div>' +
+                        '<div class="task-card-meta">Rows: ' + escapeHtml(task.processedRows || 0) + '/' + escapeHtml(task.rowCount || 0) + '</div>' +
+                    '</div>';
+                }).join('');
+            }
+
+            if (queuedTasks.length === 0) {
+                queuedTaskList.innerHTML = '<div class="task-empty">No queued tasks</div>';
+            } else {
+                queuedTaskList.innerHTML = queuedTasks.map((task) => {
+                    return '<div class="task-card">' +
+                        '<div class="task-card-title">#' + escapeHtml(task.queuePosition) + ' ' + escapeHtml(task.taskName || 'Untitled Task') + '</div>' +
+                        '<div class="task-card-meta">Task ID: ' + escapeHtml(task.id) + '</div>' +
+                        '<div class="task-card-meta">Rows: ' + escapeHtml(task.rowCount || 0) + '</div>' +
+                    '</div>';
+                }).join('');
+            }
+        }
+
+        async function refreshQueueBoard() {
+            try {
+                const response = await fetch('/api/queue');
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || 'Queue query failed');
+                }
+
+                renderTaskBoard(result);
+            } catch (error) {
+                console.error('Failed to refresh task board:', error);
+            }
+        }
+
+        function startQueuePolling() {
+            if (queuePolling) {
+                clearInterval(queuePolling);
+            }
+
+            refreshQueueBoard();
+            queuePolling = setInterval(refreshQueueBoard, 2000);
+        }
 
         function displayLogs(logs) {
             const logBody = document.getElementById('logBody');
             const logsContainer = document.getElementById('logsContainer');
-            
+
             if (!logs || logs.length === 0) {
                 logBody.innerHTML = '<div class="log-line log-empty">No logs yet</div>';
                 logsContainer.classList.add('show');
@@ -666,16 +1276,14 @@
 
             logsContainer.classList.add('show');
             let html = '';
-            logs.forEach(log => {
-                const isError = log.includes('ERROR') || log.includes('❌');
-                const isSuccess = log.includes('SUCCESS') || log.includes('✅');
-                const isWarning = log.includes('WARNING') || log.includes('⚠️');
+            logs.forEach((log) => {
+                const isError = log.includes('ERROR') || log.includes('Execution failed');
+                const isSuccess = log.includes('SUCCESS') || log.includes('Execution successful');
+                const isWarning = log.includes('WARNING');
                 const className = isError ? 'error' : (isSuccess ? 'success' : (isWarning ? 'warning' : ''));
-                html += `<div class="log-line ${className}">${log}</div>`;
+                html += '<div class="log-line ' + className + '">' + escapeHtml(log) + '</div>';
             });
             logBody.innerHTML = html;
-            
-            // Auto-scroll to bottom
             logBody.scrollTop = logBody.scrollHeight;
         }
 
@@ -697,7 +1305,7 @@
         function startPollingStatus(taskId, totalRows) {
             currentPolling = setInterval(async () => {
                 try {
-                    const response = await fetch(`/api/status/${taskId}`);
+                    const response = await fetch('/api/status/' + taskId);
                     const result = await response.json();
 
                     if (!response.ok || !result.success) {
@@ -708,12 +1316,11 @@
                     document.getElementById('statusValue').textContent = task.status;
                     document.getElementById('stageValue').textContent = mapStage(task.stage);
                     document.getElementById('queuePosition').textContent = String(task.queuePosition || 0);
-                    document.getElementById('processedRows').textContent = `${task.processedRows || 0}/${totalRows}`;
-                    progressFill.style.width = `${Math.min(100, Number(task.progress || 0))}%`;
+                    document.getElementById('processedRows').textContent = String(task.processedRows || 0) + '/' + String(totalRows);
+                    progressFill.style.width = String(Math.min(100, Number(task.progress || 0))) + '%';
 
-                    // Fetch and display logs
                     try {
-                        const logsResponse = await fetch(`/api/logs/${taskId}`);
+                        const logsResponse = await fetch('/api/logs/' + taskId);
                         if (logsResponse.ok) {
                             const logsResult = await logsResponse.json();
                             if (logsResult.success && logsResult.logs) {
@@ -727,7 +1334,7 @@
                     if (task.status === 'completed') {
                         clearInterval(currentPolling);
                         currentPolling = null;
-                        showMessage(`✅ Task completed! You will receive an email, or download directly: /api/download/${taskId}`, 'success');
+                        showMessage('Task completed. Download directly: /api/download/' + taskId, 'success');
                         submitBtn.disabled = false;
                         form.reset();
                         fileName.textContent = '';
@@ -736,17 +1343,117 @@
                     if (task.status === 'failed') {
                         clearInterval(currentPolling);
                         currentPolling = null;
-                        showMessage(`❌ Task failed: ${task.message}`, 'error');
+                        showMessage('Task failed: ' + task.message, 'error');
                         submitBtn.disabled = false;
                     }
                 } catch (error) {
                     clearInterval(currentPolling);
                     currentPolling = null;
                     submitBtn.disabled = false;
-                    showMessage(`❌ Failed to query status: ${error.message}`, 'error');
+                    showMessage('Failed to query status: ' + error.message, 'error');
                 }
             }, 2000);
         }
+
+        // Form submit
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (currentPolling) {
+                clearInterval(currentPolling);
+                currentPolling = null;
+            }
+
+            const email = document.getElementById('email').value;
+            const targetPath = '/data/input/';
+            const taskName = document.getElementById('taskName').value || 'Untitled Task';
+            const selectedUploadMethod = document.getElementById('uploadMethod').value;
+
+            let tableData = '';
+            if (selectedUploadMethod === 'file') {
+                if (!fileInput.files.length) {
+                    showMessage('Please select a CSV file', 'error');
+                    return;
+                }
+                tableData = await readFileAsText(fileInput.files[0]);
+                tableDataInput.value = tableData;
+            } else {
+                tableData = tableDataInput.value;
+                if (!tableData.trim()) {
+                    showMessage('Please enter table data', 'error');
+                    return;
+                }
+            }
+
+            const lines = tableData.trim().split('\n');
+            if (lines.length < 1) {
+                showMessage('Table data cannot be empty', 'error');
+                return;
+            }
+
+            const columnCheck = validateTwoColumns(tableData);
+            if (!columnCheck.ok) {
+                showMessage(columnCheck.message, 'error');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            progressBar.classList.add('show');
+            status.classList.add('show');
+            progressFill.style.width = '5%';
+            document.getElementById('statusValue').textContent = 'Submitted';
+            document.getElementById('stageValue').textContent = 'Waiting for server response';
+            document.getElementById('queuePosition').textContent = '-';
+            document.getElementById('processedRows').textContent = '0';
+
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email,
+                        targetPath,
+                        taskName,
+                        tableData,
+                        rowCount: lines.length
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('taskId').textContent = result.taskId;
+                    document.getElementById('queuePosition').textContent = String(result.queuePosition || 0);
+                    document.getElementById('stageValue').textContent = 'Queued';
+                    progressFill.style.width = '15%';
+
+                    showMessage('Task submitted. Current queue position: ' + String(result.queuePosition || 0) + '. Notification email: ' + email, 'info');
+                    startPollingStatus(result.taskId, lines.length);
+                } else {
+                    showMessage('Submission failed: ' + result.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Network error: ' + error.message, 'error');
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
+
+        form.addEventListener('reset', () => {
+            if (currentPolling) {
+                clearInterval(currentPolling);
+                currentPolling = null;
+            }
+            messageContainer.innerHTML = '';
+            progressBar.classList.remove('show');
+            status.classList.remove('show');
+            document.getElementById('logsContainer').classList.remove('show');
+            fileName.textContent = '';
+        });
+
+        startQueuePolling();
     </script>
 </body>
 </html>

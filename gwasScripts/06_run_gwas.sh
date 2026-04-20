@@ -21,7 +21,8 @@ set -e
 # (On older Ubuntu/Debian you can use: sudo apt install libgfortran3)
 
 KMER_LENGTH="$1"
-PHENO_FILE="${2:-disease.pheno}"   # default disease.pheno for testing
+DATASET_DIR="${GWAS_DATASET_DIR:-./E_Coli_1}"
+PHENO_FILE="${2:-$DATASET_DIR/resistence.pheno}"   # default E. coli phenotype file
 THREADS="${3:-8}"
 OUTDIR="${4:-output_dir}"
 
@@ -52,6 +53,6 @@ fi
 rm -rf "$OUTDIR"
 EXTRA_ARGS=()
 [[ "$5" == "--dont_remove_intermediates" ]] && EXTRA_ARGS+=(--dont_remove_intermediates)
-python2.7 ./kmers_gwas.py --pheno "$PHENO_FILE" --kmers_number 100000 --kmers_table kmers_table -l "$KMER_LENGTH" -p "$THREADS" --outdir "$OUTDIR" --gemma_path ./external_programs/gemma_0_96 "${EXTRA_ARGS[@]}"
+python2.7 ./kmers_gwas.py --pheno "$PHENO_FILE" --kmers_number 100000 --kmers_table "$DATASET_DIR/kmers_table" -l "$KMER_LENGTH" -p "$THREADS" --outdir "$OUTDIR" --gemma_path ./external_programs/gemma_0_96 "${EXTRA_ARGS[@]}"
 
 echo "GWAS run complete. See $OUTDIR for results."
