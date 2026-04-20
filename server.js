@@ -14,6 +14,24 @@ const MAX_CONCURRENT_TASKS = Number(process.env.MAX_CONCURRENT_TASKS || 2);
 const PROCESSING_DELAY_MS = Number(process.env.PROCESSING_DELAY_MS || 3000);
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 const GWAS_RUNNER_IMAGE = process.env.GWAS_RUNNER_IMAGE || 'gwas-worker:latest';
+const EXAMPLE_GRAINS = {
+    ecoli1: {
+        label: 'E. coli 1',
+        phenoFilePath: path.join(__dirname, 'gwasScripts', 'E_Coli_1', 'resistence.pheno')
+    },
+    ecoli2: {
+        label: 'E. coli 2',
+        phenoFilePath: path.join(__dirname, 'gwasScripts', 'E_Coli_2', 'resistence.pheno')
+    }
+};
+
+function getExampleGrainConfig(grainKey) {
+    if (!grainKey || typeof grainKey !== 'string') {
+        return null;
+    }
+
+    return EXAMPLE_GRAINS[grainKey.toLowerCase()] || null;
+}
 
 // Middleware configuration
 app.use(bodyParser.json({ limit: '50mb' }));
@@ -65,6 +83,14 @@ function runCommand(command, args = []) {
             resolve({ success: true, stdout, stderr });
         });
     });
+}
+
+/**
+ * Check whether a Docker container is currently running
+ */
+async function isContainerRunning(containerName) {
+    const result = await runCommand('docker', ['inspect', '-f', '{{.State.Running}}', containerName]);
+    return String(result.stdout || '').trim() === 'true';
 }
 
 /**
@@ -301,6 +327,42 @@ async function sendNotificationEmail(email, taskId, taskName, status, message, d
     }
 }
 
+/**
+ * Send task-received confirmation email right after upload is accepted
+ */
+async function sendTaskReceivedEmail(email, taskId, taskName, status, queuePosition) {
+    const statusLabel = status === 'running' ? 'Running' : 'Queued';
+    const queueText = status === 'queued'
+        ? `<p><strong>Queue Position:</strong> ${queuePosition}</p>`
+        : '<p><strong>Queue Position:</strong> 0 (started immediately)</p>';
+
+    const mailOptions = {
+        from: process.env.SMTP_FROM || 'noreply@gwas.local',
+        to: email,
+        subject: `GWAS Task Received - ${taskName} [${taskId}]`,
+        html: `
+            <h2>Task Accepted</h2>
+            <p>Your upload was received successfully and the task has been created.</p>
+            <p><strong>Task ID:</strong> ${taskId}</p>
+            <p><strong>Task Name:</strong> ${taskName}</p>
+            <p><strong>Current Status:</strong> ${statusLabel}</p>
+            ${queueText}
+            <p><strong>Status API:</strong> <code>${BASE_URL}/api/status/${taskId}</code></p>
+            <hr>
+            <p style="color: #999; font-size: 12px;">This is an auto-generated confirmation email.</p>
+        `
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`[Email] Upload confirmation sent to: ${email}`);
+        return { success: true, message: 'Upload confirmation email sent' };
+    } catch (error) {
+        console.error(`[Email] Upload confirmation failed: ${error.message}`);
+        return { success: false, message: `Failed to send upload confirmation email: ${error.message}` };
+    }
+}
+
 async function processTask(taskId) {
     const task = tasks[taskId];
     if (!task) {
@@ -324,11 +386,17 @@ async function processTask(taskId) {
     const containerName = process.env.DOCKER_CONTAINER || 'gwas-worker';
 
     try {
-        // Start container
-        taskLogs[taskId].push(`[${new Date().toLocaleTimeString()}] 🚀 Starting Docker container: ${containerName}`);
-        await runCommand('docker', ['start', containerName]);
-        console.log(`[Task ${taskId}] Docker container started: ${containerName}`);
-        taskLogs[taskId].push(`[${new Date().toLocaleTimeString()}] ✅ Docker container started`);
+        // Start container only when it is not already running
+        const containerRunning = await isContainerRunning(containerName);
+        if (containerRunning) {
+            taskLogs[taskId].push(`[${new Date().toLocaleTimeString()}] ℹ️ Docker container already running: ${containerName}`);
+            console.log(`[Task ${taskId}] Docker container already running: ${containerName}`);
+        } else {
+            taskLogs[taskId].push(`[${new Date().toLocaleTimeString()}] 🚀 Starting Docker container: ${containerName}`);
+            await runCommand('docker', ['start', containerName]);
+            console.log(`[Task ${taskId}] Docker container started: ${containerName}`);
+            taskLogs[taskId].push(`[${new Date().toLocaleTimeString()}] ✅ Docker container started`);
+        }
 
         await sleep(Math.max(500, Math.floor(PROCESSING_DELAY_MS / 2)));
         task.progress = 60;
@@ -377,10 +445,21 @@ async function processTask(taskId) {
     } finally {
         // Stop container
         try {
-            taskLogs[taskId].push(`[${new Date().toLocaleTimeString()}] ⛔ Stopping Docker container: ${containerName}`);
-            await runCommand('docker', ['stop', containerName]);
-            console.log(`[Task ${taskId}] Docker container stopped: ${containerName}`);
-            taskLogs[taskId].push(`[${new Date().toLocaleTimeString()}] ✅ Docker container stopped`);
+            const hasOtherRunningTasks = Object.values(tasks).some(
+                (t) => t && t.id !== taskId && t.status === 'running'
+            );
+            const hasQueuedTasks = taskQueue.length > 0;
+
+            if (hasOtherRunningTasks || hasQueuedTasks) {
+                const keepRunningMsg = `[${new Date().toLocaleTimeString()}] ℹ️ Keep Docker container running: active or queued task(s) still exist`;
+                taskLogs[taskId].push(keepRunningMsg);
+                console.log(`[Task ${taskId}] Skip stop: active or queued tasks still exist`);
+            } else {
+                taskLogs[taskId].push(`[${new Date().toLocaleTimeString()}] ⛔ Stopping Docker container: ${containerName}`);
+                await runCommand('docker', ['stop', containerName]);
+                console.log(`[Task ${taskId}] Docker container stopped: ${containerName}`);
+                taskLogs[taskId].push(`[${new Date().toLocaleTimeString()}] ✅ Docker container stopped`);
+            }
         } catch (err) {
             console.error(`[Task ${taskId}] Failed to stop container:`, err);
         }
@@ -481,6 +560,18 @@ app.post('/api/upload', async (req, res) => {
         updateQueuedPositions();
         tryStartQueuedTasks();
 
+        // Send immediate confirmation email once task is accepted
+        const acceptedTask = tasks[taskId];
+        const acceptedStatus = acceptedTask?.status || 'queued';
+        const acceptedQueuePosition = acceptedStatus === 'queued' ? getQueuePosition(taskId) : 0;
+        await sendTaskReceivedEmail(
+            email,
+            taskId,
+            acceptedTask?.taskName || 'Untitled Task',
+            acceptedStatus,
+            acceptedQueuePosition
+        );
+
         // Return response immediately
         res.json({
             success: true,
@@ -538,13 +629,114 @@ app.get('/api/status/:taskId', (req, res) => {
  * API route: queue overview
  */
 app.get('/api/queue', (req, res) => {
+    const runningTasks = Object.values(tasks)
+        .filter((task) => task && task.status === 'running')
+        .map((task) => ({
+            id: task.id,
+            taskName: task.taskName,
+            email: task.email,
+            stage: task.stage,
+            progress: task.progress,
+            rowCount: task.rowCount,
+            processedRows: task.processedRows,
+            startedAt: task.startedAt || null,
+            message: task.message
+        }));
+
+    const queuedTasks = taskQueue
+        .map((taskId, index) => {
+            const task = tasks[taskId];
+            if (!task) {
+                return null;
+            }
+
+            return {
+                id: task.id,
+                taskName: task.taskName,
+                email: task.email,
+                rowCount: task.rowCount,
+                queuePosition: index + 1,
+                createdAt: task.createdAt || null,
+                message: task.message
+            };
+        })
+        .filter(Boolean);
+
     res.json({
         success: true,
         activeTaskCount,
         maxConcurrentTasks: MAX_CONCURRENT_TASKS,
+        runningTaskCount: runningTasks.length,
         queuedTaskCount: taskQueue.length,
-        queuedTaskIds: [...taskQueue]
+        queuedTaskIds: [...taskQueue],
+        runningTasks,
+        queuedTasks
     });
+});
+
+/**
+ * API route: list available example grains
+ */
+app.get('/api/examples', (req, res) => {
+    const examples = Object.entries(EXAMPLE_GRAINS).map(([key, value]) => ({
+        key,
+        label: value.label,
+        phenoPath: value.phenoFilePath
+    }));
+
+    res.json({
+        success: true,
+        examples
+    });
+});
+
+/**
+ * API route: fetch example phenotype file
+ */
+app.get('/api/examples/:grain/pheno', (req, res) => {
+    const example = getExampleGrainConfig(req.params.grain);
+
+    if (!example) {
+        return res.status(404).json({
+            success: false,
+            message: 'Example grain not found'
+        });
+    }
+
+    if (!fs.existsSync(example.phenoFilePath)) {
+        return res.status(404).json({
+            success: false,
+            message: `Example file not found: ${example.phenoFilePath}`
+        });
+    }
+
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.send(fs.readFileSync(example.phenoFilePath, 'utf8'));
+});
+
+/**
+ * API route: download example phenotype file
+ */
+app.get('/api/examples/:grain/download', (req, res) => {
+    const example = getExampleGrainConfig(req.params.grain);
+
+    if (!example) {
+        return res.status(404).json({
+            success: false,
+            message: 'Example grain not found'
+        });
+    }
+
+    if (!fs.existsSync(example.phenoFilePath)) {
+        return res.status(404).json({
+            success: false,
+            message: `Example file not found: ${example.phenoFilePath}`
+        });
+    }
+
+    res.setHeader('Content-Type', 'text/tab-separated-values; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${req.params.grain}_resistence.pheno"`);
+    res.send(fs.readFileSync(example.phenoFilePath, 'utf8'));
 });
 
 /**
