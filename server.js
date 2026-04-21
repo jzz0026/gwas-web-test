@@ -14,6 +14,9 @@ const MAX_CONCURRENT_TASKS = Number(process.env.MAX_CONCURRENT_TASKS || 2);
 const PROCESSING_DELAY_MS = Number(process.env.PROCESSING_DELAY_MS || 3000);
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 const GWAS_RUNNER_IMAGE = process.env.GWAS_RUNNER_IMAGE || 'gwas-worker:latest';
+const ARCHIVE_RETENTION_DAYS = Number(process.env.ARCHIVE_RETENTION_DAYS || 7);
+const ARCHIVE_RETENTION_MS = ARCHIVE_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+const ARCHIVE_CLEANUP_INTERVAL_MS = Number(process.env.ARCHIVE_CLEANUP_INTERVAL_MS || 60 * 60 * 1000);
 const EXAMPLE_GRAINS = {
     ecoli1: {
         label: 'E. coli 1',
@@ -63,6 +66,109 @@ const tasks = {};
 const taskQueue = [];
 const taskLogs = {};  // Store each task's logs
 let activeTaskCount = 0;
+
+function isTaskArchiveExpired(task) {
+    if (!task || !task.archiveExpiresAt) {
+        return false;
+    }
+
+    const expiresAtMs = new Date(task.archiveExpiresAt).getTime();
+    if (Number.isNaN(expiresAtMs)) {
+        return false;
+    }
+
+    return Date.now() >= expiresAtMs;
+}
+
+function clearTaskArchive(taskId, reason = 'expired') {
+    const task = tasks[taskId];
+    if (!task) {
+        return;
+    }
+
+    if (task.archiveFilePath && fs.existsSync(task.archiveFilePath)) {
+        try {
+            fs.unlinkSync(task.archiveFilePath);
+        } catch (error) {
+            console.error(`[Task ${taskId}] Failed to delete archive file: ${error.message}`);
+        }
+    }
+
+    task.archiveFilePath = null;
+    task.archiveFileName = null;
+    task.downloadUrl = null;
+    task.archiveExpiresAt = null;
+
+    if (reason === 'expired') {
+        task.message = 'Archive expired after 7 days and was automatically deleted.';
+    }
+}
+
+function cleanupExpiredArchives() {
+    const now = Date.now();
+
+    Object.values(tasks).forEach((task) => {
+        if (!task || !task.id) {
+            return;
+        }
+
+        if (isTaskArchiveExpired(task)) {
+            console.log(`[Archive Cleanup] Expired archive removed for task ${task.id}`);
+            clearTaskArchive(task.id, 'expired');
+        }
+    });
+
+    // Best-effort cleanup for orphan archives not referenced in current in-memory tasks.
+    try {
+        const files = fs.readdirSync(uploadsDir);
+        files
+            .filter((name) => /^result_[a-f0-9-]+\.tar\.gz$/i.test(name))
+            .forEach((name) => {
+                const fullPath = path.join(uploadsDir, name);
+                const stat = fs.statSync(fullPath);
+                if (now - stat.mtimeMs >= ARCHIVE_RETENTION_MS) {
+                    fs.unlinkSync(fullPath);
+                    console.log(`[Archive Cleanup] Deleted orphan archive: ${name}`);
+                }
+            });
+    } catch (error) {
+        console.error(`[Archive Cleanup] Failed to scan uploads: ${error.message}`);
+    }
+}
+
+/**
+ * Create compressed archive for task output folder and copy to web uploads directory
+ */
+async function createTaskResultArchive(containerName, taskId) {
+    const outputDirName = `output_${taskId}`;
+    const outputDirInContainer = `/data/output/${outputDirName}`;
+    const archiveFileName = `result_${taskId}.tar.gz`;
+    const archiveInContainer = `/tmp/${archiveFileName}`;
+    const archiveOnHost = path.join(uploadsDir, archiveFileName);
+
+    if (fs.existsSync(archiveOnHost)) {
+        fs.unlinkSync(archiveOnHost);
+    }
+
+    await runCommand('docker', ['exec', containerName, 'test', '-d', outputDirInContainer]);
+    await runCommand('docker', ['exec', containerName, 'tar', '-czf', archiveInContainer, '-C', '/data/output', outputDirName]);
+
+    try {
+        await runCommand('docker', ['cp', `${containerName}:${archiveInContainer}`, archiveOnHost]);
+    } finally {
+        try {
+            await runCommand('docker', ['exec', containerName, 'rm', '-f', archiveInContainer]);
+        } catch (cleanupErr) {
+            console.warn(`[Task ${taskId}] Failed to clean temp archive in container: ${cleanupErr.message}`);
+        }
+    }
+
+    return {
+        archiveFilePath: archiveOnHost,
+        archiveFileName,
+        downloadUrl: `${BASE_URL}/api/download/${taskId}`
+    };
+}
 
 /**
  * Execute command (no shell; avoid injection risk)
@@ -408,13 +514,24 @@ async function processTask(taskId) {
         task.message = 'Running GWAS analysis script...';
         const runnerResult = await executeRunnerTask(containerName, copyResult.remoteFilePath, task.id);
 
+        task.stage = 'archive';
+        task.progress = 92;
+        task.message = 'Compressing result folder for download...';
+        taskLogs[taskId].push(`[${new Date().toLocaleTimeString()}] 📦 Compressing output folder...`);
+        const archiveResult = await createTaskResultArchive(containerName, task.id);
+        task.archiveFilePath = archiveResult.archiveFilePath;
+        task.archiveFileName = archiveResult.archiveFileName;
+        task.downloadUrl = archiveResult.downloadUrl;
+        task.archiveExpiresAt = new Date(Date.now() + ARCHIVE_RETENTION_MS).toISOString();
+        taskLogs[taskId].push(`[${new Date().toLocaleTimeString()}] ✅ Archive ready: ${archiveResult.archiveFileName}`);
+
         await sleep(Math.max(500, Math.floor(PROCESSING_DELAY_MS / 2)));
         task.status = 'completed';
         task.stage = 'done';
         task.progress = 100;
         task.processedRows = task.rowCount;
         task.completedAt = new Date();
-        task.message = `✅ Completed: GWAS analysis succeeded. Results at ${runnerResult.outputPath || runnerResult.outputDir}`;
+        task.message = `✅ Completed: GWAS analysis succeeded. Archive retention: ${ARCHIVE_RETENTION_DAYS} days.`;
 
         await sendNotificationEmail(
             task.email,
@@ -422,7 +539,7 @@ async function processTask(taskId) {
             task.taskName,
             'success',
             `GWAS analysis completed successfully. Processed ${task.rowCount} rows. Results at ${runnerResult.outputPath}.`,
-            `${BASE_URL}/api/download/${task.id}`
+            archiveResult.downloadUrl
         );
 
         console.log(`[Task ${task.id}] ✅ Completed`);
@@ -544,6 +661,10 @@ app.post('/api/upload', async (req, res) => {
             rowCount: tableValidation.rowCount || rowCount || 0,
             processedRows: 0,
             progress: 0,
+            archiveFilePath: null,
+            archiveFileName: null,
+            downloadUrl: null,
+            archiveExpiresAt: null,
             message: `Task received. ${taskQueue.length} task(s) ahead in queue`
         };
 
@@ -617,6 +738,10 @@ app.get('/api/status/:taskId', (req, res) => {
             rowCount: task.rowCount,
             processedRows: task.processedRows,
             queuePosition: task.status === 'queued' ? getQueuePosition(task.id) : 0,
+            downloadUrl: task.downloadUrl || null,
+            archiveReady: Boolean(task.archiveFilePath && fs.existsSync(task.archiveFilePath)),
+            archiveExpiresAt: task.archiveExpiresAt || null,
+            archiveRetentionDays: ARCHIVE_RETENTION_DAYS,
             message: task.message,
             createdAt: task.createdAt,
             startedAt: task.startedAt || null,
@@ -740,7 +865,7 @@ app.get('/api/examples/:grain/download', (req, res) => {
 });
 
 /**
- * API route: download result (demo)
+ * API route: download archived task result
  */
 app.get('/api/download/:taskId', (req, res) => {
     const { taskId } = req.params;
@@ -760,12 +885,22 @@ app.get('/api/download/:taskId', (req, res) => {
         });
     }
 
-    // Generate result file (demo: simple text file)
-    const resultContent = `GWAS Processing Result\n=================================\nTask ID: ${taskId}\nTask Name: ${task.taskName}\nProcessed Rows: ${task.processedRows}\nStatus: ${task.status}\nCompleted At: ${new Date().toLocaleString()}\n\nDetails:\n${task.message}`;
-    
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="result_${taskId}.txt"`);
-    res.send(resultContent);
+    if (isTaskArchiveExpired(task)) {
+        clearTaskArchive(taskId, 'expired');
+        return res.status(410).json({
+            success: false,
+            message: `Archive expired after ${ARCHIVE_RETENTION_DAYS} days and was automatically deleted`
+        });
+    }
+
+    if (!task.archiveFilePath || !fs.existsSync(task.archiveFilePath)) {
+        return res.status(404).json({
+            success: false,
+            message: 'Archived result file not found for this task'
+        });
+    }
+
+    res.download(task.archiveFilePath, task.archiveFileName || `result_${taskId}.tar.gz`);
 });
 
 /**
@@ -797,6 +932,13 @@ app.get('/api/logs/:taskId', (req, res) => {
 });
 
 /**
+ * Task detail page route
+ */
+app.get('/task/:taskId', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'task.html'));
+});
+
+/**
  * Health check
  */
 app.get('/health', (req, res) => {
@@ -815,7 +957,11 @@ app.listen(PORT, () => {
     console.log(`🧬 Runner image: ${GWAS_RUNNER_IMAGE}`);
     console.log(`⏱️  Max concurrent tasks: ${MAX_CONCURRENT_TASKS}`);
     console.log(`🧪 Demo delay (instead of real GWAS): ${PROCESSING_DELAY_MS}ms`);
+    console.log(`🗃️  Archive retention: ${ARCHIVE_RETENTION_DAYS} days`);
     console.log(`========================================\n`);
+
+    cleanupExpiredArchives();
+    setInterval(cleanupExpiredArchives, ARCHIVE_CLEANUP_INTERVAL_MS);
 });
 
 // Error handling
