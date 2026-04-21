@@ -301,6 +301,80 @@ function validateAndParseTableData(tableData) {
     return { ok: true, rows, rowCount: rows.length };
 }
 
+function extractAccessionsFromRows(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) {
+        return [];
+    }
+
+    const firstValue = String(rows[0].col1 || '').trim().toLowerCase();
+    const dataRows = firstValue === 'accession_id' ? rows.slice(1) : rows;
+
+    return dataRows
+        .map((row) => String(row.col1 || '').trim())
+        .filter((value) => value.length > 0);
+}
+
+function validateAccessionsAgainstExampleRows(inputRows, grainKey) {
+    const example = getExampleGrainConfig(grainKey);
+    if (!example) {
+        return {
+            ok: false,
+            message: 'Please select a valid grain example before submitting'
+        };
+    }
+
+    if (!fs.existsSync(example.phenoFilePath)) {
+        return {
+            ok: false,
+            message: `Example file not found: ${example.phenoFilePath}`
+        };
+    }
+
+    const exampleContent = fs.readFileSync(example.phenoFilePath, 'utf8');
+    const exampleValidation = validateAndParseTableData(exampleContent);
+    if (!exampleValidation.ok) {
+        return {
+            ok: false,
+            message: `Example file format is invalid for ${example.label}`
+        };
+    }
+
+    const inputAccessions = extractAccessionsFromRows(inputRows);
+    if (inputAccessions.length === 0) {
+        return {
+            ok: false,
+            message: 'Input table must contain at least one accession_id row'
+        };
+    }
+
+    const exampleAccessions = new Set(extractAccessionsFromRows(exampleValidation.rows));
+    const missingAccessions = [];
+
+    for (const accession of inputAccessions) {
+        if (!exampleAccessions.has(accession)) {
+            missingAccessions.push(accession);
+        }
+    }
+
+    if (missingAccessions.length > 0) {
+        const preview = missingAccessions.slice(0, 10).join(', ');
+        const suffix = missingAccessions.length > 10
+            ? ` (and ${missingAccessions.length - 10} more)`
+            : '';
+
+        return {
+            ok: false,
+            message: `accession_id check failed for ${example.label}. Missing accession_id values: ${preview}${suffix}`
+        };
+    }
+
+    return {
+        ok: true,
+        exampleLabel: example.label,
+        checkedCount: inputAccessions.length
+    };
+}
+
 /**
  * Execute cp command to Docker container
  */
@@ -550,14 +624,6 @@ async function processTask(taskId) {
         task.completedAt = new Date();
         task.message = `❌ Task failed: ${error.message || 'Unknown error'}`;
 
-        await sendNotificationEmail(
-            task.email,
-            task.id,
-            task.taskName,
-            'failed',
-            `Task processing failed: ${error.message || 'Unknown error'}`
-        );
-
         console.error(`[Task ${task.id}] ❌ Failed:`, error);
     } finally {
         // Stop container
@@ -621,7 +687,7 @@ function tryStartQueuedTasks() {
  */
 app.post('/api/upload', async (req, res) => {
     try {
-        const { email, targetPath, taskName, tableData, rowCount } = req.body;
+        const { email, targetPath, taskName, tableData, rowCount, selectedGrain } = req.body;
         const taskId = uuidv4();
 
         // Validate input
@@ -648,12 +714,28 @@ app.post('/api/upload', async (req, res) => {
             });
         }
 
+        if (!selectedGrain || typeof selectedGrain !== 'string' || !selectedGrain.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please select a grain example before submitting'
+            });
+        }
+
+        const accessionValidation = validateAccessionsAgainstExampleRows(tableValidation.rows, selectedGrain);
+        if (!accessionValidation.ok) {
+            return res.status(400).json({
+                success: false,
+                message: accessionValidation.message
+            });
+        }
+
         // Save task metadata
         tasks[taskId] = {
             id: taskId,
             email,
             targetPath: targetPathValidation.value,
             taskName: taskName || 'Untitled Task',
+            selectedGrain: String(selectedGrain || '').toLowerCase(),
             status: 'queued',
             stage: 'queue',
             queuePosition: taskQueue.length + 1,

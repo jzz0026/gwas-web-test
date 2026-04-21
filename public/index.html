@@ -609,7 +609,7 @@
         <div class="top-note-row">
             <p class="note-text">Upload phenotype table and Run kmer GWAS</p>
             <div class="example-row">
-                <span>Choose Grain</span>
+                <span>Choose Grain *</span>
                 <select id="exampleSelect" style="border: 1px solid var(--line); border-radius: 4px; padding: 5px 10px; background: #f5f7f8; color: #415963; cursor: pointer; font-size: 13px;">
                     <option value="">Select an example...</option>
                     <option value="ecoli1">E. coli 1</option>
@@ -619,12 +619,13 @@
                 <button type="button" id="downloadExampleBtn" style="margin-left: 8px; border: 1px solid #2a5d71; border-radius: 3px; padding: 5px 14px; cursor: pointer; font-size: 13px; font-weight: 700; color: #ecf7fc; background: linear-gradient(180deg, #2a6f89 0, #21586d 100%);" disabled>Download Example</button>
             </div>
             <div style="margin-top: 8px; padding: 8px 10px; background: #f9fafb; border-left: 3px solid #5f7a87; border-radius: 2px; font-size: 12px; color: #5f7a87; line-height: 1.5;">
-                <strong>Note:</strong> The accession_id values in your input/uploaded file must be contained within the accession_id values of the selected example.
+                <strong>Note:</strong> The accession_id values in your input/uploaded file must be contained within the accession_id values of the example table of selected grain.
             </div>
         </div>
 
         <form id="uploadForm">
             <section class="portal-panel">
+                <div class="table-input-hint" style="margin-bottom: 6px; font-weight: 700;">Manual Input Area</div>
                 <textarea class="query-area" id="tableData" placeholder="Paste query table data (exactly two columns, separated by comma or tab), or choose file upload mode below."></textarea>
 
                 <div class="control-grid">
@@ -1181,6 +1182,12 @@ ERR9353846\t22.05089619`
             const targetPath = '/data/input/';
             const taskName = document.getElementById('taskName').value || 'Untitled Task';
             const selectedUploadMethod = document.getElementById('uploadMethod').value;
+            const selectedGrain = exampleSelect.value;
+
+            if (!selectedGrain) {
+                showMessage('Please choose a Grain example before submitting', 'error');
+                return;
+            }
 
             let tableData = '';
             if (selectedUploadMethod === 'file') {
@@ -1224,6 +1231,7 @@ ERR9353846\t22.05089619`
                         email,
                         targetPath,
                         taskName,
+                        selectedGrain,
                         tableData,
                         rowCount: lines.length
                     })
