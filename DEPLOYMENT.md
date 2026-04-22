@@ -28,7 +28,7 @@ Best for active backend/frontend development.
 
 Requirements:
 
-- Node.js 14+
+- Node.js 18+
 - npm or yarn
 - Docker (for `docker cp` and worker runtime)
 
@@ -119,7 +119,7 @@ SMTP_PASS=your-password
 
 - Image: built locally
 - Port: `3000`
-- Depends on: `gwas-worker`, `mailserver`
+- Depends on: `mailserver`
 - Mounts:
 - `./uploads` (temporary uploaded files)
 - `/var/run/docker.sock` (Docker access)
@@ -155,6 +155,7 @@ docker-compose logs -f
 
 # Enter containers
 docker-compose exec gwas-web sh
+docker-compose start gwas-worker
 docker-compose exec gwas-worker sh
 
 # List files in worker input path
@@ -211,7 +212,7 @@ docker-compose logs gwas-web | grep -i mail
 # http://localhost:8025
 
 # 4) Restart mail service
-docker-compose restart gwas-mailserver
+docker-compose restart mailserver
 ```
 
 ### Port conflict
