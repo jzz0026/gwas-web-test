@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GWAS Task Monitor</title>
+    <style>
+        :root {
+            --bg: #eceff1;
+            --surface: #ffffff;
+            --line: #cfd8dc;
+            --text: #243238;
+            --muted: #5f7a87;
+            --nav: #2f6a81;
+            --nav-dark: #1e4a5b;
+            --ok: #1d6b22;
+            --warn: #d68000;
+            --err: #9c1e26;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Trebuchet MS", "Lucida Sans Unicode", "Lucida Grande", "Segoe UI", sans-serif;
+            background: linear-gradient(180deg, #d8e2e7 0, #e9eef1 160px, #eceff1 100%);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .topbar {
+            background: linear-gradient(90deg, var(--nav-dark) 0, var(--nav) 60%, #4f8595 100%);
+            border-bottom: 2px solid #183a49;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+        }
+
+        .topbar-inner {
+            width: min(1120px, 96%);
+            margin: 0 auto;
+            min-height: 62px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 8px 0;
+        }
+
+        .brand h1 {
+            color: #eef7fb;
+            font-size: 22px;
+            letter-spacing: 0.2px;
+        }
+
+        .brand small {
+            color: #d7e6ee;
+            font-size: 13px;
+        }
+
+        .home-link {
+            text-decoration: none;
+            color: #eaf3f8;
+            border: 1px solid rgba(211, 231, 239, 0.35);
+            background: rgba(18, 51, 65, 0.48);
+            border-radius: 4px;
+            padding: 7px 12px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .home-link:hover {
+            background: rgba(18, 51, 65, 0.78);
+        }
+
+        .page {
+            width: min(1120px, 96%);
+            margin: 16px auto 30px;
+        }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .panel h2 {
+            font-size: 15px;
+            color: #2b4f60;
+            margin-bottom: 10px;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .status-item {
+            border: 1px solid #d9e5ea;
+            border-radius: 4px;
+            background: #f9fcfe;
+            padding: 10px;
+        }
+
+        .status-label {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .status-value {
+            color: #314c58;
+            font-size: 13px;
+            font-weight: 700;
+            word-break: break-word;
+        }
+
+        .execution-message {
+            margin-top: 10px;
+            border-left: 3px solid #7096a6;
+            background: #f3f8fb;
+            padding: 10px;
+            font-size: 18px;
+            font-weight: 800;
+            color: #385360;
+            line-height: 1.5;
+        }
+
+        .queue-summary {
+            font-size: 15px;
+            font-weight: 700;
+            color: #2f4f5c;
+            padding: 8px 0;
+        }
+
+        .download-panel {
+            margin-top: 8px;
+            padding: 10px;
+            border: 1px solid #cfdee5;
+            border-radius: 4px;
+            background: #f7fbfd;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .download-panel.show {
+            display: flex;
+        }
+
+        .download-text {
+            color: #365260;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .retention-note {
+            margin-top: 8px;
+            color: #5b7682;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.5;
+        }
+
+        .download-btn {
+            text-decoration: none;
+            border: 1px solid #2a5d71;
+            border-radius: 3px;
+            padding: 7px 12px;
+            color: #ecf7fc;
+            background: linear-gradient(180deg, #2a6f89 0, #21586d 100%);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .download-btn:hover {
+            filter: brightness(1.05);
+        }
+
+        .logs-box {
+            border: 1px solid #d7e2e7;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .logs-header {
+            background: #2b4f60;
+            color: #eef7fb;
+            padding: 10px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .logs-body {
+            background: #f4f7f9;
+            max-height: 420px;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: "Consolas", "Courier New", monospace;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .log-line {
+            color: #344a54;
+            border-bottom: 1px solid #dde6ea;
+            padding: 4px 0;
+            word-break: break-all;
+        }
+
+        .log-line.success {
+            color: var(--ok);
+        }
+
+        .log-line.error {
+            color: var(--err);
+        }
+
+        .log-line.warning {
+            color: var(--warn);
+        }
+
+        .log-empty {
+            color: #849aa4;
+            font-style: italic;
+        }
+
+        @media (max-width: 900px) {
+            .status-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 620px) {
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <div class="topbar-inner">
+            <div class="brand">
+                <h1>GWAS Task Monitor</h1>
+                <small>Execution Logs and task progress</small>
+            </div>
+            <a class="home-link" href="/">Back to Upload</a>
+        </div>
+    </header>
+
+    <main class="page">
+        <section class="panel">
+            <h2>Task Monitor</h2>
+            <div class="status-grid">
+                <div class="status-item">
+                    <span class="status-label">Task ID</span>
+                    <span class="status-value" id="taskId">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Status</span>
+                    <span class="status-value" id="statusValue">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Stage</span>
+                    <span class="status-value" id="stageValue">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Progress</span>
+                    <span class="status-value" id="progressValue">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Queue Position</span>
+                    <span class="status-value" id="queuePosition">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Processed Rows</span>
+                    <span class="status-value" id="processedRows">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Running Tasks</span>
+                    <span class="status-value" id="runningCount">0</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Queued Tasks</span>
+                    <span class="status-value" id="queuedCount">0</span>
+                </div>
+            </div>
+            <div class="execution-message" id="taskMessage">Waiting for task updates...</div>
+            <div class="queue-summary" id="queueSummary">Running: 0 | Queued: 0</div>
+            <div class="download-panel" id="downloadPanel">
+                <span class="download-text">Result archive is ready.</span>
+                <a class="download-btn" id="downloadBtn" href="#" download>Download .tar.gz</a>
+            </div>
+            <div class="retention-note" id="retentionNote">Downloaded archive files are kept for 7 days and then deleted automatically.</div>
+        </section>
+
+        <section class="panel">
+            <h2>Execution Logs</h2>
+            <div class="logs-box">
+                <div class="logs-header">Live log stream</div>
+                <div class="logs-body" id="logBody"></div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const taskId = decodeURIComponent(window.location.pathname.split('/').pop() || '');
+        const statusValue = document.getElementById('statusValue');
+        const stageValue = document.getElementById('stageValue');
+        const progressValue = document.getElementById('progressValue');
+        const queuePosition = document.getElementById('queuePosition');
+        const processedRows = document.getElementById('processedRows');
+        const runningCount = document.getElementById('runningCount');
+        const queuedCount = document.getElementById('queuedCount');
+        const taskMessage = document.getElementById('taskMessage');
+        const queueSummary = document.getElementById('queueSummary');
+        const logBody = document.getElementById('logBody');
+        const taskIdEl = document.getElementById('taskId');
+        const downloadPanel = document.getElementById('downloadPanel');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const retentionNote = document.getElementById('retentionNote');
+
+        let poller = null;
+
+        function mapStage(stage) {
+            const stageMap = {
+                queue: 'Queued',
+                copy: 'Copying input file (cp)',
+                gwas: 'Running GWAS in isolated container',
+                archive: 'Compressing results archive',
+                done: 'Completed',
+                failed: 'Failed'
+            };
+            return stageMap[stage] || stage || '-';
+        }
+
+        function formatLocalDateTime(isoString) {
+            if (!isoString) {
+                return '-';
+            }
+
+            const date = new Date(isoString);
+            if (Number.isNaN(date.getTime())) {
+                return '-';
+            }
+
+            return date.toLocaleString();
+        }
+
+        function formatTaskMessage(message) {
+            const raw = String(message || '');
+            const cleaned = raw.replace(/\s*Results at\s+[^.]+\.\s*Download:\s*[^.]+\.\s*/i, ' ');
+            return cleaned.replace(/\s{2,}/g, ' ').trim();
+        }
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function renderLogs(logs) {
+            if (!Array.isArray(logs) || logs.length === 0) {
+                logBody.innerHTML = '<div class="log-line log-empty">No logs yet</div>';
+                return;
+            }
+
+            logBody.innerHTML = logs.map((log) => {
+                const isError = log.includes('ERROR') || log.includes('Execution failed') || log.includes('Failed');
+                const isSuccess = log.includes('SUCCESS') || log.includes('Execution successful') || log.includes('Completed');
+                const isWarning = log.includes('WARNING') || log.includes('Keep Docker container running');
+                const className = isError ? 'error' : (isSuccess ? 'success' : (isWarning ? 'warning' : ''));
+                return '<div class="log-line ' + className + '">' + escapeHtml(log) + '</div>';
+            }).join('');
+            logBody.scrollTop = logBody.scrollHeight;
+        }
+
+        async function pollTaskData() {
+            if (!taskId) {
+                taskMessage.textContent = 'Invalid task id in URL';
+                return;
+            }
+
+            taskIdEl.textContent = taskId;
+
+            try {
+                const [statusResp, logsResp, queueResp] = await Promise.all([
+                    fetch('/api/status/' + encodeURIComponent(taskId)),
+                    fetch('/api/logs/' + encodeURIComponent(taskId)),
+                    fetch('/api/queue')
+                ]);
+
+                const statusResult = await statusResp.json();
+                const logsResult = await logsResp.json();
+                const queueResult = await queueResp.json();
+
+                if (!statusResp.ok || !statusResult.success) {
+                    throw new Error(statusResult.message || 'Task status query failed');
+                }
+
+                const task = statusResult.task;
+                statusValue.textContent = task.status || '-';
+                stageValue.textContent = mapStage(task.stage);
+                progressValue.textContent = String(Number(task.progress || 0)) + '%';
+                queuePosition.textContent = String(task.queuePosition || 0);
+                processedRows.textContent = String(task.processedRows || 0) + '/' + String(task.rowCount || 0);
+                taskMessage.textContent = formatTaskMessage(task.message) || '-';
+
+                if (task.status === 'completed' && task.downloadUrl) {
+                    downloadBtn.href = task.downloadUrl;
+                    downloadPanel.classList.add('show');
+                } else {
+                    downloadPanel.classList.remove('show');
+                }
+
+                const retentionDays = Number(task.archiveRetentionDays || 7);
+                if (task.archiveExpiresAt) {
+                    retentionNote.textContent = 'Downloaded archive files are kept for ' + retentionDays + ' days and then deleted automatically. Expires at: ' + formatLocalDateTime(task.archiveExpiresAt);
+                } else {
+                    retentionNote.textContent = 'Downloaded archive files are kept for ' + retentionDays + ' days and then deleted automatically.';
+                }
+
+                if (queueResp.ok && queueResult.success) {
+                    const running = Number(queueResult.runningTaskCount || 0);
+                    const queued = Number(queueResult.queuedTaskCount || 0);
+                    runningCount.textContent = String(running);
+                    queuedCount.textContent = String(queued);
+                    queueSummary.textContent = 'Running: ' + running + ' | Queued: ' + queued;
+                }
+
+                if (logsResp.ok && logsResult.success) {
+                    renderLogs(logsResult.logs);
+                } else {
+                    renderLogs([]);
+                }
+
+                if (task.status === 'completed' || task.status === 'failed') {
+                    clearInterval(poller);
+                    poller = null;
+                }
+            } catch (error) {
+                taskMessage.textContent = 'Failed to refresh task page: ' + error.message;
+            }
+        }
+
+        pollTaskData();
+        poller = setInterval(pollTaskData, 2000);
+    </script>
+</body>
+</html>

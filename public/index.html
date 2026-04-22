@@ -609,7 +609,7 @@
         <div class="top-note-row">
             <p class="note-text">Upload phenotype table and Run kmer GWAS</p>
             <div class="example-row">
-                <span>Choose Grain</span>
+                <span>Choose Grain *</span>
                 <select id="exampleSelect" style="border: 1px solid var(--line); border-radius: 4px; padding: 5px 10px; background: #f5f7f8; color: #415963; cursor: pointer; font-size: 13px;">
                     <option value="">Select an example...</option>
                     <option value="ecoli1">E. coli 1</option>
@@ -619,12 +619,13 @@
                 <button type="button" id="downloadExampleBtn" style="margin-left: 8px; border: 1px solid #2a5d71; border-radius: 3px; padding: 5px 14px; cursor: pointer; font-size: 13px; font-weight: 700; color: #ecf7fc; background: linear-gradient(180deg, #2a6f89 0, #21586d 100%);" disabled>Download Example</button>
             </div>
             <div style="margin-top: 8px; padding: 8px 10px; background: #f9fafb; border-left: 3px solid #5f7a87; border-radius: 2px; font-size: 12px; color: #5f7a87; line-height: 1.5;">
-                <strong>Note:</strong> The accession_id values in your input/uploaded file must be contained within the accession_id values of the selected example.
+                <strong>Note:</strong> The accession_id values in your input/uploaded file must be contained within the accession_id values of the example table of selected grain.
             </div>
         </div>
 
         <form id="uploadForm">
             <section class="portal-panel">
+                <div class="table-input-hint" style="margin-bottom: 6px; font-weight: 700;">Manual Input Area</div>
                 <textarea class="query-area" id="tableData" placeholder="Paste query table data (exactly two columns, separated by comma or tab), or choose file upload mode below."></textarea>
 
                 <div class="control-grid">
@@ -674,55 +675,10 @@
 
                 <div id="messageContainer"></div>
 
-                <div class="status" id="status">
-                    <div class="status-grid">
-                        <div class="status-item">
-                            <span class="status-label">Task ID</span>
-                            <span class="status-value" id="taskId">-</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Status</span>
-                            <span class="status-value" id="statusValue">Processing...</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Stage</span>
-                            <span class="status-value" id="stageValue">Queued</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Queue Position</span>
-                            <span class="status-value" id="queuePosition">-</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">Processed Rows</span>
-                            <span class="status-value" id="processedRows">0</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="logs-container" id="logsContainer">
-                    <div class="logs-header">
-                        <span>Execution Logs</span>
-                        <button type="button" class="toggle-logs-btn" id="toggleLogsBtn">Collapse</button>
-                    </div>
-                    <div class="logs-body" id="logBody"></div>
-                </div>
-
                 <div class="task-board" id="taskBoard">
                     <div class="task-board-header">
-                        <span>Task Monitor</span>
+                        <span>Queue Overview</span>
                         <span id="taskBoardSummary">Running: 0 | Queued: 0</span>
-                    </div>
-                    <div class="task-board-body">
-                        <div class="task-board-columns">
-                            <div class="task-column">
-                                <h3>Running Tasks</h3>
-                                <div class="task-list" id="runningTaskList"></div>
-                            </div>
-                            <div class="task-column">
-                                <h3>Queued Tasks</h3>
-                                <div class="task-list" id="queuedTaskList"></div>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -750,12 +706,10 @@
         const submitBtn = document.getElementById('submitBtn');
         const progressBar = document.getElementById('progressBar');
         const progressFill = document.getElementById('progressFill');
-        const status = document.getElementById('status');
         const tableDataInput = document.getElementById('tableData');
 
         let currentPolling = null;
         let queuePolling = null;
-        let logsExpanded = true;
 
         // Example buttons fill demo table
         const exampleData = {
@@ -1184,60 +1138,11 @@ ERR9353846\t22.05089619`
             return { ok: true };
         }
 
-        function mapStage(stage) {
-            const stageMap = {
-                queue: 'Queued',
-                copy: 'Copying input file (cp)',
-                gwas: 'Running GWAS in isolated container',
-                done: 'Completed',
-                failed: 'Failed'
-            };
-            return stageMap[stage] || stage || '-';
-        }
-
-        function escapeHtml(value) {
-            return String(value || '')
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-        }
-
         function renderTaskBoard(data) {
-            const runningTaskList = document.getElementById('runningTaskList');
-            const queuedTaskList = document.getElementById('queuedTaskList');
             const taskBoardSummary = document.getElementById('taskBoardSummary');
-
-            const runningTasks = Array.isArray(data.runningTasks) ? data.runningTasks : [];
-            const queuedTasks = Array.isArray(data.queuedTasks) ? data.queuedTasks : [];
-
-            taskBoardSummary.textContent = 'Running: ' + runningTasks.length + ' | Queued: ' + queuedTasks.length;
-
-            if (runningTasks.length === 0) {
-                runningTaskList.innerHTML = '<div class="task-empty">No running tasks</div>';
-            } else {
-                runningTaskList.innerHTML = runningTasks.map((task) => {
-                    return '<div class="task-card">' +
-                        '<div class="task-card-title">' + escapeHtml(task.taskName || 'Untitled Task') + ' (' + escapeHtml(task.id) + ')</div>' +
-                        '<div class="task-card-meta">Stage: ' + escapeHtml(mapStage(task.stage)) + '</div>' +
-                        '<div class="task-card-meta">Progress: ' + escapeHtml(task.progress) + '%</div>' +
-                        '<div class="task-card-meta">Rows: ' + escapeHtml(task.processedRows || 0) + '/' + escapeHtml(task.rowCount || 0) + '</div>' +
-                    '</div>';
-                }).join('');
-            }
-
-            if (queuedTasks.length === 0) {
-                queuedTaskList.innerHTML = '<div class="task-empty">No queued tasks</div>';
-            } else {
-                queuedTaskList.innerHTML = queuedTasks.map((task) => {
-                    return '<div class="task-card">' +
-                        '<div class="task-card-title">#' + escapeHtml(task.queuePosition) + ' ' + escapeHtml(task.taskName || 'Untitled Task') + '</div>' +
-                        '<div class="task-card-meta">Task ID: ' + escapeHtml(task.id) + '</div>' +
-                        '<div class="task-card-meta">Rows: ' + escapeHtml(task.rowCount || 0) + '</div>' +
-                    '</div>';
-                }).join('');
-            }
+            const runningCount = Number(data.runningTaskCount || 0);
+            const queuedCount = Number(data.queuedTaskCount || 0);
+            taskBoardSummary.textContent = 'Running: ' + runningCount + ' | Queued: ' + queuedCount;
         }
 
         async function refreshQueueBoard() {
@@ -1264,97 +1169,6 @@ ERR9353846\t22.05089619`
             queuePolling = setInterval(refreshQueueBoard, 2000);
         }
 
-        function displayLogs(logs) {
-            const logBody = document.getElementById('logBody');
-            const logsContainer = document.getElementById('logsContainer');
-
-            if (!logs || logs.length === 0) {
-                logBody.innerHTML = '<div class="log-line log-empty">No logs yet</div>';
-                logsContainer.classList.add('show');
-                return;
-            }
-
-            logsContainer.classList.add('show');
-            let html = '';
-            logs.forEach((log) => {
-                const isError = log.includes('ERROR') || log.includes('Execution failed');
-                const isSuccess = log.includes('SUCCESS') || log.includes('Execution successful');
-                const isWarning = log.includes('WARNING');
-                const className = isError ? 'error' : (isSuccess ? 'success' : (isWarning ? 'warning' : ''));
-                html += '<div class="log-line ' + className + '">' + escapeHtml(log) + '</div>';
-            });
-            logBody.innerHTML = html;
-            logBody.scrollTop = logBody.scrollHeight;
-        }
-
-        // Toggle logs panel
-        document.getElementById('toggleLogsBtn').addEventListener('click', (e) => {
-            e.preventDefault();
-            const logBody = document.getElementById('logBody');
-            const btn = document.getElementById('toggleLogsBtn');
-            logsExpanded = !logsExpanded;
-            if (logsExpanded) {
-                logBody.style.display = 'block';
-                btn.textContent = 'Collapse';
-            } else {
-                logBody.style.display = 'none';
-                btn.textContent = 'Expand';
-            }
-        });
-
-        function startPollingStatus(taskId, totalRows) {
-            currentPolling = setInterval(async () => {
-                try {
-                    const response = await fetch('/api/status/' + taskId);
-                    const result = await response.json();
-
-                    if (!response.ok || !result.success) {
-                        throw new Error(result.message || 'Status query failed');
-                    }
-
-                    const task = result.task;
-                    document.getElementById('statusValue').textContent = task.status;
-                    document.getElementById('stageValue').textContent = mapStage(task.stage);
-                    document.getElementById('queuePosition').textContent = String(task.queuePosition || 0);
-                    document.getElementById('processedRows').textContent = String(task.processedRows || 0) + '/' + String(totalRows);
-                    progressFill.style.width = String(Math.min(100, Number(task.progress || 0))) + '%';
-
-                    try {
-                        const logsResponse = await fetch('/api/logs/' + taskId);
-                        if (logsResponse.ok) {
-                            const logsResult = await logsResponse.json();
-                            if (logsResult.success && logsResult.logs) {
-                                displayLogs(logsResult.logs);
-                            }
-                        }
-                    } catch (logError) {
-                        console.error('Failed to fetch logs:', logError);
-                    }
-
-                    if (task.status === 'completed') {
-                        clearInterval(currentPolling);
-                        currentPolling = null;
-                        showMessage('Task completed. Download directly: /api/download/' + taskId, 'success');
-                        submitBtn.disabled = false;
-                        form.reset();
-                        fileName.textContent = '';
-                    }
-
-                    if (task.status === 'failed') {
-                        clearInterval(currentPolling);
-                        currentPolling = null;
-                        showMessage('Task failed: ' + task.message, 'error');
-                        submitBtn.disabled = false;
-                    }
-                } catch (error) {
-                    clearInterval(currentPolling);
-                    currentPolling = null;
-                    submitBtn.disabled = false;
-                    showMessage('Failed to query status: ' + error.message, 'error');
-                }
-            }, 2000);
-        }
-
         // Form submit
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1368,6 +1182,12 @@ ERR9353846\t22.05089619`
             const targetPath = '/data/input/';
             const taskName = document.getElementById('taskName').value || 'Untitled Task';
             const selectedUploadMethod = document.getElementById('uploadMethod').value;
+            const selectedGrain = exampleSelect.value;
+
+            if (!selectedGrain) {
+                showMessage('Please choose a Grain example before submitting', 'error');
+                return;
+            }
 
             let tableData = '';
             if (selectedUploadMethod === 'file') {
@@ -1399,12 +1219,7 @@ ERR9353846\t22.05089619`
 
             submitBtn.disabled = true;
             progressBar.classList.add('show');
-            status.classList.add('show');
             progressFill.style.width = '5%';
-            document.getElementById('statusValue').textContent = 'Submitted';
-            document.getElementById('stageValue').textContent = 'Waiting for server response';
-            document.getElementById('queuePosition').textContent = '-';
-            document.getElementById('processedRows').textContent = '0';
 
             try {
                 const response = await fetch('/api/upload', {
@@ -1416,6 +1231,7 @@ ERR9353846\t22.05089619`
                         email,
                         targetPath,
                         taskName,
+                        selectedGrain,
                         tableData,
                         rowCount: lines.length
                     })
@@ -1424,13 +1240,8 @@ ERR9353846\t22.05089619`
                 const result = await response.json();
 
                 if (response.ok) {
-                    document.getElementById('taskId').textContent = result.taskId;
-                    document.getElementById('queuePosition').textContent = String(result.queuePosition || 0);
-                    document.getElementById('stageValue').textContent = 'Queued';
                     progressFill.style.width = '15%';
-
-                    showMessage('Task submitted. Current queue position: ' + String(result.queuePosition || 0) + '. Notification email: ' + email, 'info');
-                    startPollingStatus(result.taskId, lines.length);
+                    window.location.href = '/task/' + encodeURIComponent(result.taskId);
                 } else {
                     showMessage('Submission failed: ' + result.message, 'error');
                 }
@@ -1448,8 +1259,6 @@ ERR9353846\t22.05089619`
             }
             messageContainer.innerHTML = '';
             progressBar.classList.remove('show');
-            status.classList.remove('show');
-            document.getElementById('logsContainer').classList.remove('show');
             fileName.textContent = '';
         });
 

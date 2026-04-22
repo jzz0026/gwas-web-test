@@ -40,7 +40,7 @@ A complete web application for uploading two-column table data to a Docker envir
 ### Prerequisites
 
 - Docker and Docker Compose
-- Node.js 14+ (for local development)
+- Node.js 18+ (for local development)
 - A modern browser
 
 ### Start with Docker Compose (recommended)
@@ -126,10 +126,14 @@ Content-Type: application/json
   "email": "user@example.com",
   "targetPath": "/data/input/",
   "taskName": "My Task",
+  "selectedGrain": "ecoli1",
   "tableData": "column1\tcolumn2\ndata1\tdata2\ndata3\tdata4",
   "rowCount": 2
 }
 ```
+
+Required fields: `email`, `targetPath`, `tableData`, `selectedGrain`.
+`rowCount` is optional metadata.
 
 Typical response:
 
@@ -147,10 +151,32 @@ Typical response:
 GET /api/status/{taskId}
 ```
 
+The status payload includes queue position, progress/stage, and archive metadata such as `archiveReady`, `archiveExpiresAt`, and `archiveRetentionDays`.
+
+### Query queue overview
+
+```http
+GET /api/queue
+```
+
 ### Download result
 
 ```http
 GET /api/download/{taskId}
+```
+
+### Query task logs
+
+```http
+GET /api/logs/{taskId}
+```
+
+### List and download example phenotype files
+
+```http
+GET /api/examples
+GET /api/examples/{grain}/pheno
+GET /api/examples/{grain}/download
 ```
 
 ### Health check
@@ -162,6 +188,9 @@ GET /health
 ## Table Format
 
 Use exactly two columns per non-empty line.
+
+When uploading, `selectedGrain` must be one of the configured examples (currently `ecoli1` or `ecoli2`).
+The first column values are validated against the selected example phenotype file.
 
 CSV example:
 
@@ -236,7 +265,8 @@ Set `DOCKER_CONTAINER` in `.env`, or update `container_name` in `docker-compose.
 
 ### Where are uploaded files stored?
 
-Temporary files are written under `./uploads` and removed after processing.
+Temporary input files are written under `./uploads` and removed after processing.
+Result archives are also written under `./uploads` and retained for 7 days by default, then cleaned automatically.
 
 ## Project Structure
 
@@ -260,6 +290,7 @@ gwas-web-test/
 4. Add authentication and request rate limits.
 5. Add log retention and monitoring.
 6. Add periodic cleanup and backups for volumes.
+7. Externalize task state to durable storage (current queue/task data is in-memory).
 
 ## License
 

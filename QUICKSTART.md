@@ -17,6 +17,8 @@ bash start.sh
 # Choose option 1 in the menu
 ```
 
+Note: option 1 keeps `gwas-worker` in standby (stopped). It starts automatically when a task is submitted.
+
 ### Option 2: Manual Docker Compose startup
 
 ```bash
@@ -95,8 +97,11 @@ docker-compose down
 # Restart app
 docker-compose restart gwas-web
 
+# Start worker (needed before exec if worker is in standby)
+docker-compose start gwas-worker
+
 # Enter worker container
-docker-compose exec gwas-worker bash
+docker-compose exec gwas-worker sh
 
 # List uploaded files in worker container
 docker-compose exec gwas-worker ls -la /data/input/
@@ -126,6 +131,7 @@ docker-compose restart gwas-web
 ### How do I inspect uploaded data?
 
 ```bash
+docker-compose start gwas-worker
 docker-compose exec gwas-worker ls -la /data/input/
 ```
 
