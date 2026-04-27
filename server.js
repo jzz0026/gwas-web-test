@@ -67,6 +67,34 @@ const taskQueue = [];
 const taskLogs = {};  // Store each task's logs
 let activeTaskCount = 0;
 
+function getFirstHeaderValue(value) {
+    if (!value) {
+        return '';
+    }
+
+    return String(value).split(',')[0].trim();
+}
+
+function getRequestBaseUrl(req) {
+    if (!req) {
+        return BASE_URL;
+    }
+
+    const forwardedProto = getFirstHeaderValue(req.headers['x-forwarded-proto']);
+    const forwardedHost = getFirstHeaderValue(req.headers['x-forwarded-host']);
+    const host = forwardedHost || getFirstHeaderValue(req.get('host'));
+    const rawProtocol = (forwardedProto || req.protocol || 'http').toLowerCase();
+    const protocol = rawProtocol === 'https' ? 'https' : 'http';
+
+    // Keep host validation strict to avoid unsafe Host-header injection in email links.
+    const hostIsSafe = /^[a-z0-9.-]+(?::\d+)?$/i.test(host);
+    if (!hostIsSafe) {
+        return BASE_URL;
+    }
+
+    return `${protocol}://${host}`;
+}
+
 function isTaskArchiveExpired(task) {
     if (!task || !task.archiveExpiresAt) {
         return false;
@@ -139,7 +167,7 @@ function cleanupExpiredArchives() {
 /**
  * Create compressed archive for task output folder and copy to web uploads directory
  */
-async function createTaskResultArchive(containerName, taskId) {
+async function createTaskResultArchive(containerName, taskId, publicBaseUrl = BASE_URL) {
     const outputDirName = `output_${taskId}`;
     const outputDirInContainer = `/data/output/${outputDirName}`;
     const archiveFileName = `result_${taskId}.tar.gz`;
@@ -166,7 +194,7 @@ async function createTaskResultArchive(containerName, taskId) {
     return {
         archiveFilePath: archiveOnHost,
         archiveFileName,
-        downloadUrl: `${BASE_URL}/api/download/${taskId}`
+        downloadUrl: `${publicBaseUrl}/api/download/${taskId}`
     };
 }
 
@@ -510,7 +538,7 @@ async function sendNotificationEmail(email, taskId, taskName, status, message, d
 /**
  * Send task-received confirmation email right after upload is accepted
  */
-async function sendTaskReceivedEmail(email, taskId, taskName, status, queuePosition) {
+async function sendTaskReceivedEmail(email, taskId, taskName, status, queuePosition, publicBaseUrl = BASE_URL) {
     const statusLabel = status === 'running' ? 'Running' : 'Queued';
     const queueText = status === 'queued'
         ? `<p><strong>Queue Position:</strong> ${queuePosition}</p>`
@@ -527,7 +555,7 @@ async function sendTaskReceivedEmail(email, taskId, taskName, status, queuePosit
             <p><strong>Task Name:</strong> ${taskName}</p>
             <p><strong>Current Status:</strong> ${statusLabel}</p>
             ${queueText}
-            <p><strong>Status API:</strong> <code>${BASE_URL}/api/status/${taskId}</code></p>
+            <p><strong>Status API:</strong> <code>${publicBaseUrl}/api/status/${taskId}</code></p>
             <hr>
             <p style="color: #999; font-size: 12px;">This is an auto-generated confirmation email.</p>
         `
@@ -592,7 +620,7 @@ async function processTask(taskId) {
         task.progress = 92;
         task.message = 'Compressing result folder for download...';
         taskLogs[taskId].push(`[${new Date().toLocaleTimeString()}] 📦 Compressing output folder...`);
-        const archiveResult = await createTaskResultArchive(containerName, task.id);
+        const archiveResult = await createTaskResultArchive(containerName, task.id, task.publicBaseUrl || BASE_URL);
         task.archiveFilePath = archiveResult.archiveFilePath;
         task.archiveFileName = archiveResult.archiveFileName;
         task.downloadUrl = archiveResult.downloadUrl;
@@ -612,7 +640,7 @@ async function processTask(taskId) {
             task.id,
             task.taskName,
             'success',
-            `GWAS analysis completed successfully. Processed ${task.rowCount} rows. Results at ${runnerResult.outputPath}.`,
+            `GWAS analysis completed successfully. Processed ${task.rowCount} rows.`,
             archiveResult.downloadUrl
         );
 
@@ -689,6 +717,7 @@ app.post('/api/upload', async (req, res) => {
     try {
         const { email, targetPath, taskName, tableData, rowCount, selectedGrain } = req.body;
         const taskId = uuidv4();
+        const publicBaseUrl = getRequestBaseUrl(req);
 
         // Validate input
         if (!email || !targetPath || !tableData) {
@@ -747,6 +776,7 @@ app.post('/api/upload', async (req, res) => {
             archiveFileName: null,
             downloadUrl: null,
             archiveExpiresAt: null,
+            publicBaseUrl,
             message: `Task received. ${taskQueue.length} task(s) ahead in queue`
         };
 
@@ -772,7 +802,8 @@ app.post('/api/upload', async (req, res) => {
             taskId,
             acceptedTask?.taskName || 'Untitled Task',
             acceptedStatus,
-            acceptedQueuePosition
+            acceptedQueuePosition,
+            acceptedTask?.publicBaseUrl || BASE_URL
         );
 
         // Return response immediately
